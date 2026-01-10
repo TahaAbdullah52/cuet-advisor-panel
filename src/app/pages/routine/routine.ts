@@ -30,13 +30,13 @@ export class Routine implements OnInit, OnDestroy {
     courseName: '',
     batchName: '',
     roomNo: '',
-    dayName: 'Monday',
+    dayName: 'Sunday',
     startTime: '',
     endTime: '',
     type: 'Class'
   };
 
-  dayOptions = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Sunday'];
+  dayOptions = ['Sunday','Monday', 'Tuesday', 'Wednesday', 'Thursday'];
   typeOptions = ['Class', 'Lab'];
   batchOptions = ['Batch 19', 'Batch 20', 'Batch 21', 'Batch 22', 'Batch 23', 'Batch 24'];
 
@@ -52,6 +52,14 @@ export class Routine implements OnInit, OnDestroy {
         this.updateTodaySchedule();
       })
     );
+
+    // Force initial data load if no routines after a short delay
+    setTimeout(() => {
+      if (this.allRoutines.length === 0) {
+        console.log('Routine: No routines found, loading...');
+        this.loadRoutines();
+      }
+    }, 100);
   }
 
   ngOnDestroy() {

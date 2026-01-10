@@ -57,11 +57,20 @@ export class Dashboard implements OnInit, OnDestroy {
         this.students = students;
         this.updateStatistics();
         this.updateBatchData();
+        console.log('Dashboard: Students loaded:', students.length);
       })
     );
 
     // Check if using mock data
     this.isUsingMockData = this.studentService.isUsingMockData();
+
+    // Force initial data load if no students after a short delay
+    setTimeout(() => {
+      if (this.students.length === 0) {
+        console.log('Dashboard: No students found, refreshing...');
+        this.studentService.refreshStudents();
+      }
+    }, 100);
   }
 
   ngOnDestroy() {
@@ -104,8 +113,8 @@ export class Dashboard implements OnInit, OnDestroy {
       batchData.students.push(student);
       batchData.totalCgpa += student.overallCgpa;
       
-      // Count approved students (using approval_status field)
-      if (student.approval_status === 'approved') {
+      // Count approved students (only active students, using approval_status field)
+      if (student.graduationStatus === 'active' && student.approval_status === 'approved') {
         batchData.approvedCount++;
       }
     });

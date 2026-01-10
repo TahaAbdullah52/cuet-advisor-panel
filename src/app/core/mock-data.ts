@@ -239,15 +239,43 @@ function getNextSemesterForRegistration(batch: string): string {
   return "L1T1";
 }
 
-// Helper function to get approval status - by default all students are disapproved for next semester
-function getApprovalStatus(batch: string): 'approved' | 'disapproved' {
+// Helper function to get approval status based on registration workflow
+function getApprovalStatus(batch: string, studentIndex: number, registrationStatus: 'registered' | 'not_registered'): 'approved' | 'disapproved' | 'pending' {
   const batchNum = parseInt(batch);
   
   // Graduated students don't need approval
   if (batchNum === 19) return 'approved';
   
-  // All other students are disapproved by default for next semester registration
-  return 'disapproved';
+  // Only registered students can have approval status
+  if (registrationStatus === 'not_registered') {
+    return 'pending'; // Unregistered students are pending (no approval decision yet)
+  }
+  
+  // For registered students: mix of approved and disapproved
+  // 60% approved, 40% disapproved
+  return studentIndex % 5 < 3 ? 'approved' : 'disapproved';
+}
+
+// Helper function to get graduation status
+function getGraduationStatus(batch: string): 'graduated' | 'active' {
+  const batchNum = parseInt(batch);
+  
+  // Batch 19 has graduated
+  if (batchNum === 19) return 'graduated';
+  
+  // All other batches are still active
+  return 'active';
+}
+
+// Helper function to get registration status
+function getRegistrationStatus(batch: string, studentIndex: number): 'registered' | 'not_registered' {
+  const batchNum = parseInt(batch);
+  
+  // Graduated students don't need registration
+  if (batchNum === 19) return 'registered';
+  
+  // Mix of registration statuses: 60% registered, 40% not registered
+  return studentIndex % 5 < 3 ? 'registered' : 'not_registered';
 }
 
 /* -------------------------
@@ -268,6 +296,7 @@ export const STUDENTS: Student[] = Array.from({ length: 20 }).map((_, i) => {
   
   const studentId = `${batchYear}${deptCode}${studentNum}`;
   const studentName = STUDENT_NAMES[i];
+  const registrationStatus = getRegistrationStatus(String(batchYear), i);
   
   return {
     studentId,
@@ -277,7 +306,9 @@ export const STUDENTS: Student[] = Array.from({ length: 20 }).map((_, i) => {
     overallCgpa,
     terms,
     nextSemesterRegistration: getNextSemesterForRegistration(String(batchYear)),
-    approval_status: getApprovalStatus(String(batchYear)),
+    registrationStatus: registrationStatus,
+    approval_status: getApprovalStatus(String(batchYear), i, registrationStatus),
+    graduationStatus: getGraduationStatus(String(batchYear)),
     thesisInfo: generateThesisInfo(String(batchYear), i)
   };
 });

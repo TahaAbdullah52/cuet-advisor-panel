@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, delay } from 'rxjs/operators';
-import { Student, LoginCredentials, LoginResponse, ThesisInfo } from './models';
+import { Student, LoginCredentials, LoginResponse, ThesisInfo, ApprovalRequest, ApprovalResponse } from './models';
 import { RoutineEntry } from './routine.models';
 import { STUDENTS } from './mock-data';
 import { MOCK_ROUTINE } from './routine-mock-data';
@@ -110,6 +110,36 @@ export class ApiService {
         catchError(error => {
           console.warn('API call failed, falling back to mock data:', error);
           return this.approveMockStudent(studentId, termId);
+        })
+      );
+  }
+
+  // ML-based approval with generated content
+  generateApprovalContent(approvalRequest: ApprovalRequest): Observable<ApprovalResponse> {
+    if (this.useMockData) {
+      return this.mockGenerateApprovalContent(approvalRequest);
+    }
+
+    return this.http.post<ApprovalResponse>(`${this.baseUrl}/students/generate-approval`, approvalRequest)
+      .pipe(
+        catchError(error => {
+          console.warn('ML API call failed, falling back to mock:', error);
+          return this.mockGenerateApprovalContent(approvalRequest);
+        })
+      );
+  }
+
+  sendApprovalEmail(studentId: string, content: string, status: 'approved' | 'disapproved'): Observable<ApiResponse<boolean>> {
+    if (this.useMockData) {
+      return this.mockSendApprovalEmail(studentId, content, status);
+    }
+
+    const payload = { studentId, content, status };
+    return this.http.post<ApiResponse<boolean>>(`${this.baseUrl}/students/send-approval-email`, payload)
+      .pipe(
+        catchError(error => {
+          console.warn('Email API call failed, falling back to mock:', error);
+          return this.mockSendApprovalEmail(studentId, content, status);
         })
       );
   }
@@ -396,7 +426,9 @@ export class ApiService {
       terms: [],
       overallCgpa: 0,
       nextSemesterRegistration: 'L4T2',
+      registrationStatus: 'registered', // New students are registered by default
       approval_status: 'disapproved',
+      graduationStatus: 'active', // New students are always active
       thesisInfo: {
         topicAssigned: false,
         topicName: '',
@@ -489,6 +521,116 @@ export class ApiService {
         error: 'Routine not found'
       }));
     }
+  }
+
+  // Mock ML-based Approval Content Generation
+  private mockGenerateApprovalContent(approvalRequest: ApprovalRequest): Observable<ApprovalResponse> {
+    const student = STUDENTS.find(s => s.studentId === approvalRequest.studentId);
+    
+    if (!student) {
+      return throwError(() => ({
+        success: false,
+        message: 'Student not found'
+      }));
+    }
+
+    // Generate mock ML content based on student performance
+    let generatedContent = '';
+    const latestTerm = student.terms
+      .filter(t => t.resultPublished)
+      .sort((a, b) => b.termId.localeCompare(a.termId))[0];
+
+    if (approvalRequest.newStatus === 'approved') {
+      if (latestTerm && latestTerm.gpa >= 3.5) {
+        generatedContent = `Dear ${student.name},
+
+Based on your excellent academic performance in ${latestTerm.termId} with a GPA of ${latestTerm.gpa}, I am pleased to approve your registration for the next semester.
+
+Your consistent performance demonstrates strong academic capability and dedication. You have successfully completed all required courses with satisfactory grades.
+
+Key Performance Highlights:
+- Current Term GPA: ${latestTerm.gpa}
+- Overall CGPA: ${student.overallCgpa}
+- Academic Standing: Excellent
+
+You are hereby approved to register for ${student.nextSemesterRegistration}. Please ensure you complete the registration process within the specified deadline.
+
+Best regards,
+Dr. Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+      } else {
+        generatedContent = `Dear ${student.name},
+
+After reviewing your academic performance in ${latestTerm?.termId || 'previous semester'}, I am approving your registration for the next semester with some recommendations.
+
+While your performance shows room for improvement, I believe you have the potential to excel with proper guidance and effort.
+
+Performance Analysis:
+- Current Term GPA: ${latestTerm?.gpa || 'N/A'}
+- Overall CGPA: ${student.overallCgpa}
+- Areas for Improvement: Focus on core subjects
+
+You are approved to register for ${student.nextSemesterRegistration}. I recommend meeting with me during office hours to discuss strategies for academic improvement.
+
+Best regards,
+Dr. Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+      }
+    } else {
+      generatedContent = `Dear ${student.name},
+
+After careful review of your academic performance in ${latestTerm?.termId || 'previous semester'}, I regret to inform you that your registration for the next semester cannot be approved at this time.
+
+This decision is based on the following academic concerns:
+- Current Term GPA: ${latestTerm?.gpa || 'N/A'}
+- Overall CGPA: ${student.overallCgpa}
+- Academic Standing: Requires Improvement
+
+To proceed with registration, you will need to:
+1. Meet with me during office hours to discuss your academic plan
+2. Complete any pending assignments or retake failed courses
+3. Demonstrate improved academic commitment
+
+Please schedule an appointment to discuss your path forward. I am committed to helping you succeed academically.
+
+Best regards,
+Dr. Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+    }
+
+    return of({
+      success: true,
+      generatedContent,
+      message: 'Content generated successfully (mock ML)'
+    }).pipe(delay(this.mockDelay));
+  }
+
+  // Mock Send Approval Email
+  private mockSendApprovalEmail(studentId: string, content: string, status: 'approved' | 'disapproved'): Observable<ApiResponse<boolean>> {
+    const student = STUDENTS.find(s => s.studentId === studentId);
+    
+    if (!student) {
+      return throwError(() => ({
+        success: false,
+        message: 'Student not found'
+      }));
+    }
+
+    // Update student approval status
+    student.approval_status = status;
+
+    console.log(`Mock Email Sent to ${student.email}:`);
+    console.log(`Subject: Registration ${status === 'approved' ? 'Approved' : 'Disapproved'} - ${student.nextSemesterRegistration}`);
+    console.log(`Content: ${content}`);
+
+    return of({
+      success: true,
+      data: true,
+      message: `Approval email sent successfully to ${student.email} (mock)`
+    }).pipe(delay(this.mockDelay));
   }
 
   // Configuration

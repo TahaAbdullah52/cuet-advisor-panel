@@ -144,18 +144,11 @@
 
             <!-- Actions -->
             <td>
-              <div class="flex items-center space-x-2">
-                <button
-                  (click)="selectStudent(student); $event.stopPropagation()"
-                  class="btn-primary text-xs px-3 py-1">
-                  Manage Thesis
-                </button>
-                <button
-                  (click)="removeStudent(student); $event.stopPropagation()"
-                  class="btn-danger text-xs px-3 py-1">
-                  Remove
-                </button>
-              </div>
+              <button
+                (click)="selectStudent(student); $event.stopPropagation()"
+                class="btn-primary text-xs px-3 py-1">
+                Manage Thesis
+              </button>
             </td>
           </tr>
 
@@ -188,14 +181,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
         </svg>
         <span>Back to Thesis List</span>
-      </button>
-      
-      <div>
-        <h1 class="text-2xl font-bold academic-title">
-          Thesis Management 
-        </h1>
-        
-      </div>
+      </button> 
     </div>
 
     <!-- Student Basic Info -->

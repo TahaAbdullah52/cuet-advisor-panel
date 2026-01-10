@@ -52,9 +52,12 @@ export class Thesis implements OnInit, OnDestroy {
     // Subscribe to student updates
     this.subscription.add(
       this.studentService.students$.subscribe(students => {
-        // Filter students who are eligible for thesis (final year students) and sort by batch
+        // Filter students who are eligible for thesis (active final year students only)
         this.students = students
-          .filter(s => s.batch === '20' || s.batch === '19') // Final year and graduated students
+          .filter(s => 
+            s.graduationStatus === 'active' && // Only active (non-graduated) students
+            (s.batch === '20' || s.batch === '21') // Final year and pre-final year students
+          )
           .sort((a, b) => {
             // Sort by batch first, then by student ID
             if (a.batch !== b.batch) {
@@ -71,6 +74,13 @@ export class Thesis implements OnInit, OnDestroy {
         this.isLoading = loading;
       })
     );
+
+    // Force initial data load if no students
+    setTimeout(() => {
+      if (this.students.length === 0) {
+        this.studentService.refreshStudents();
+      }
+    }, 100);
   }
 
   ngOnDestroy() {

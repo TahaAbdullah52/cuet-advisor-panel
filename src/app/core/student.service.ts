@@ -108,7 +108,7 @@ export class StudentService {
     const students = this.studentsSubject.value;
     const student = students.find(s => s.studentId === studentId);
     
-    if (student && student.nextSemesterRegistration !== 'Graduated') {
+    if (student && student.graduationStatus === 'active') {
       // Toggle approval status
       student.approval_status = student.approval_status === 'approved' ? 'disapproved' : 'approved';
       
@@ -141,15 +141,16 @@ export class StudentService {
 
   getApprovedCount(): number {
     return this.studentsSubject.value.filter(s =>
-      s.nextSemesterRegistration !== 'Graduated' && // Not graduated
+      s.graduationStatus === 'active' && // Only active students
       s.approval_status === 'approved' // Using new approval_status field
     ).length;
   }
 
   getPendingCount(): number {
     return this.studentsSubject.value.filter(s =>
-      s.nextSemesterRegistration !== 'Graduated' && // Not graduated
-      s.approval_status === 'disapproved' // Using new approval_status field
+      s.graduationStatus === 'active' && // Only active students
+      s.registrationStatus === 'registered' && // Only registered students
+      s.approval_status === 'pending' // Using pending status
     ).length;
   }
 

@@ -30,8 +30,23 @@ export interface Student {
   terms: Term[];
   overallCgpa: number;
   nextSemesterRegistration?: string; // Next semester they're trying to register for
-  approval_status: 'approved' | 'disapproved'; // Overall approval status for next semester registration
+  registrationStatus: 'registered' | 'not_registered'; // Registration status for current semester
+  approval_status: 'approved' | 'disapproved' | 'pending'; // Overall approval status for next semester registration
+  graduationStatus: 'graduated' | 'active'; // Graduation status
   thesisInfo?: ThesisInfo; // Thesis information
+}
+
+export interface ApprovalRequest {
+  studentId: string;
+  currentStatus: 'approved' | 'disapproved' | 'pending';
+  newStatus: 'approved' | 'disapproved';
+  generatedContent?: string;
+}
+
+export interface ApprovalResponse {
+  success: boolean;
+  generatedContent?: string;
+  message?: string;
 }
 
 export interface LoginCredentials {

@@ -54,7 +54,8 @@
           type="text"
           placeholder="e.g., 2104040"
           class="academic-input"
-          [(ngModel)]="searchId" />
+          [(ngModel)]="searchId"
+          (ngModelChange)="onSearchIdChange()" />
       </div>
 
       <!-- Filter by Approval Status -->
@@ -64,7 +65,8 @@
         </label>
         <select
           class="academic-select"
-          [(ngModel)]="selectedApprovalStatus">
+          [(ngModel)]="selectedApprovalStatus"
+          (ngModelChange)="onApprovalStatusChange()">
           <option *ngFor="let status of approvalStatusOptions" [value]="status.value">
             {{ status.label }}
           </option>
@@ -78,7 +80,8 @@
         </label>
         <select
           class="academic-select"
-          [(ngModel)]="selectedBatch">
+          [(ngModel)]="selectedBatch"
+          (ngModelChange)="onBatchChange()">
           <option value="">All Batches</option>
           <option *ngFor="let b of batches" [value]="b">
             Batch {{ b }}
@@ -123,9 +126,10 @@
           <tr>
             <th>Student ID</th>
             <th>Name</th>
+            <th>Registration Status</th>
             <th>Next Registration</th>
             <th>CGPA</th>
-            <th>Registration Status</th>
+            <th>Approval Status</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -140,6 +144,19 @@
 
             <!-- Name -->
             <td class="font-medium">{{ s.name }}</td>
+
+            <!-- Registration Status -->
+            <td>
+              <span class="px-2 py-1 rounded text-xs font-medium"
+                    [class.bg-green-100]="s.registrationStatus === 'registered'"
+                    [class.text-green-700]="s.registrationStatus === 'registered'"
+                    [class.bg-red-100]="s.registrationStatus === 'not_registered'"
+                    [class.text-red-700]="s.registrationStatus === 'not_registered'"
+                    [class.bg-gray-100]="s.graduationStatus === 'graduated'"
+                    [class.text-gray-700]="s.graduationStatus === 'graduated'">
+                {{ getRegistrationStatus(s) }}
+              </span>
+            </td>
 
             <!-- Next Semester Registration -->
             <td>
@@ -165,10 +182,16 @@
             <!-- Approval Status -->
             <td>
               <span *ngIf="getApprovalStatus(s) === 'Approved'" class="status-approved">
-                 Approved
+                ✓ Approved
               </span>
               <span *ngIf="getApprovalStatus(s) === 'Pending'" class="status-pending">
-                 Pending
+                ⏳ Pending
+              </span>
+              <span *ngIf="getApprovalStatus(s) === 'Disapproved'" class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-medium">
+                ✗ Disapproved
+              </span>
+              <span *ngIf="getApprovalStatus(s) === 'Not Registered'" class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-medium">
+                Not Registered
               </span>
               <span *ngIf="getApprovalStatus(s) === 'Graduated'" class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
                 Graduated
@@ -178,26 +201,45 @@
             <!-- Actions -->
             <td>
               <div class="flex items-center space-x-2">
-                
-                <!-- View Details -->
-                <a
-                  [routerLink]="['/students', s.studentId]"
-                  class="btn-secondary text-xs px-3 py-1"
-                  (click)="$event.stopPropagation()">
-                  View Details
-                </a>
 
-                <!-- Quick Approve/Unapprove (only if not graduated) -->
-                <button
-                  *ngIf="s.nextSemesterRegistration !== 'Graduated'"
-                  (click)="toggleApproval(s, $event)"
-                  class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
-                  [class.btn-success]="getApprovalStatus(s) === 'Pending'"
-                  [class.btn-danger]="getApprovalStatus(s) === 'Approved'">
+                <!-- Both Approve and Disapprove buttons for registered students -->
+                <div *ngIf="s.graduationStatus === 'active' && s.registrationStatus === 'registered'" 
+                     class="flex items-center space-x-1">
                   
-                  <span *ngIf="getApprovalStatus(s) === 'Pending'">Approve</span>
-                  <span *ngIf="getApprovalStatus(s) === 'Approved'">Revoke</span>
-                </button>
+                  <!-- Approve Button -->
+                  <button
+                    (click)="approveStudent(s, $event)"
+                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
+                    [class.btn-success]="s.approval_status !== 'approved'"
+                    [class.bg-green-200]="s.approval_status === 'approved'"
+                    [class.text-green-800]="s.approval_status === 'approved'"
+                    [class.font-bold]="s.approval_status === 'approved'">
+                    {{ s.approval_status === 'approved' ? '✓ Approved' : 'Approve' }}
+                  </button>
+
+                  <!-- Disapprove Button -->
+                  <button
+                    (click)="disapproveStudent(s, $event)"
+                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
+                    [class.btn-danger]="s.approval_status !== 'disapproved'"
+                    [class.bg-red-200]="s.approval_status === 'disapproved'"
+                    [class.text-red-800]="s.approval_status === 'disapproved'"
+                    [class.font-bold]="s.approval_status === 'disapproved'">
+                    {{ s.approval_status === 'disapproved' ? '✗ Disapproved' : 'Disapprove' }}
+                  </button>
+                </div>
+
+                <!-- Pending Registration -->
+                <span *ngIf="s.graduationStatus === 'active' && s.registrationStatus === 'not_registered'" 
+                      class="text-xs px-3 py-1 bg-yellow-100 text-yellow-700 rounded">
+                  Pending Registration
+                </span>
+
+                <!-- Graduated Status -->
+                <span *ngIf="s.graduationStatus === 'graduated'" 
+                      class="text-xs px-3 py-1 bg-green-100 text-green-600 rounded">
+                  Graduated
+                </span>
 
               </div>
             </td>
@@ -229,4 +271,106 @@
     </app-pagination>
   </div>
 
+</div>
+
+<!-- ML Approval Dialog -->
+<div *ngIf="showApprovalDialog" 
+     class="dialog-backdrop"
+     (click)="closeApprovalDialog()">
+  
+  <div class="dialog-content"
+       (click)="$event.stopPropagation()">
+    
+    <!-- Dialog Header -->
+    <div class="p-6 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold academic-title">
+            ML-Generated {{ pendingApprovalAction === 'approved' ? 'Approval' : 'Disapproval' }} Content
+          </h3>
+          <p class="text-sm academic-muted mt-1" *ngIf="selectedStudentForApproval">
+            Student: {{ selectedStudentForApproval.name }} ({{ selectedStudentForApproval.studentId }})
+            <br>Email: {{ selectedStudentForApproval.email }}
+          </p>
+        </div>
+        <button 
+          (click)="closeApprovalDialog()"
+          class="text-gray-400 hover:text-gray-600 transition-colors">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Dialog Content -->
+    <div class="p-6">
+      
+      <!-- Loading State -->
+      <div *ngIf="isGeneratingContent" class="text-center py-8">
+        <div class="inline-flex items-center space-x-3">
+          <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+          <span class="text-sm academic-muted">
+            {{ isUsingMockData ? 'Generating AI content...' : 'Connecting to database ML service...' }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Generated Content -->
+      <div *ngIf="!isGeneratingContent && generatedContent" class="space-y-4">
+        
+        <!-- Status Change Notice -->
+        <div *ngIf="selectedStudentForApproval && selectedStudentForApproval.approval_status === pendingApprovalAction"
+             class="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm text-blue-700">
+              <strong>Note:</strong> Student is already {{ pendingApprovalAction }}. This will send a new notification email.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Content Preview -->
+        <div>
+          <label class="block text-sm font-medium academic-text mb-2">
+            Generated Email Content (Review and Edit if Needed)
+          </label>
+          <textarea
+            [(ngModel)]="generatedContent"
+            rows="12"
+            class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+            placeholder="Generated content will appear here...">
+          </textarea>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Dialog Actions -->
+    <div class="p-6 border-t border-gray-200 flex items-center justify-end space-x-3">
+      
+      <button 
+        (click)="closeApprovalDialog()"
+        class="btn-secondary">
+        Cancel
+      </button>
+
+      <button 
+        *ngIf="!isGeneratingContent && generatedContent"
+        (click)="sendApprovalEmail()"
+        [disabled]="isSendingEmail"
+        class="btn-primary flex items-center space-x-2">
+        
+        <div *ngIf="isSendingEmail" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        <svg *ngIf="!isSendingEmail" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+        </svg>
+        <span>{{ isSendingEmail ? 'Sending...' : 'Send Email' }}</span>
+      </button>
+
+    </div>
+
+  </div>
 </div>

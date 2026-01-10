@@ -12,14 +12,6 @@
       <span>Back to Students</span>
     </button>
     
-    <div>
-      <h1 class="text-2xl font-bold academic-title">
-        Student Profile
-      </h1>
-      <p class="academic-subtitle">
-        Detailed academic information and performance
-      </p>
-    </div>
   </div>
 
   <!-- Student Basic Information -->
@@ -54,10 +46,10 @@
         </div>
 
         <div>
-          <p class="text-sm academic-muted mb-1">Batch</p>
+          <p class="text-sm academic-muted mb-1 ml-3">Batch</p>
           <p class="text-lg font-semibold academic-title">
-            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-              Batch {{ student.batch }}
+            <span class="px-3 py-1  text-black-800 rounded-full text-sm">
+               {{ student.batch }}
             </span>
           </p>
         </div>
@@ -124,15 +116,6 @@
         </div>
       </button>
     </div>
-    
-    <div class="mt-4 p-3 bg-blue-50 rounded-lg">
-      <p class="text-sm text-blue-800">
-        <strong>Legend:</strong> 
-        <span class="text-green-600">● Approved</span> | 
-        <span class="text-yellow-600">● Pending</span> | 
-        <span class="text-gray-500">● Not Published</span>
-      </p>
-    </div>
   </div>
 
   <!-- Term Details & Approval -->
@@ -167,76 +150,73 @@
           <p class="text-sm academic-muted">Total Courses</p>
           <p class="text-lg font-semibold academic-title">{{ selectedTerm.courses.length }}</p>
         </div>
-
-        <div>
-          <p class="text-sm academic-muted">Result Status</p>
-          <span class="px-3 py-1 rounded-full text-sm font-medium"
-                [class.bg-green-100]="selectedTerm.resultPublished"
-                [class.text-green-700]="selectedTerm.resultPublished"
-                [class.bg-gray-100]="!selectedTerm.resultPublished"
-                [class.text-gray-700]="!selectedTerm.resultPublished">
-            {{ selectedTerm.resultPublished ? 'Published' : 'Not Published' }}
-          </span>
-        </div>
       </div>
     </div>
 
     <!-- Registration Approval -->
     <div class="lg:col-span-2 academic-card p-6">
       <h3 class="text-lg font-semibold academic-title mb-4">
-        Registration Approval
+        Next Semester Registration Approval
       </h3>
       
-      <div *ngIf="selectedTerm.resultPublished" 
-           class="flex items-center justify-between p-4 rounded-lg"
-           [class.bg-green-50]="selectedTerm.approved"
-           [class.bg-yellow-50]="!selectedTerm.approved">
+      <!-- Overall Registration Status -->
+      <div class="flex items-center justify-between p-4 rounded-lg"
+           [class.bg-green-50]="student.approval_status === 'approved'"
+           [class.bg-red-50]="student.approval_status === 'disapproved'"
+           [class.bg-gray-50]="student.graduationStatus === 'graduated'">
         
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-full flex items-center justify-center"
-               [class.bg-green-100]="selectedTerm.approved"
-               [class.bg-yellow-100]="!selectedTerm.approved">
-            <svg *ngIf="selectedTerm.approved" class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+               [class.bg-green-100]="student.approval_status === 'approved'"
+               [class.bg-red-100]="student.approval_status === 'disapproved'"
+               [class.bg-gray-100]="student.graduationStatus === 'graduated'">
+            
+            <!-- Approved Icon -->
+            <svg *ngIf="student.approval_status === 'approved' && student.graduationStatus === 'active'" 
+                 class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
             </svg>
-            <svg *ngIf="!selectedTerm.approved" class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            
+            <!-- Disapproved Icon -->
+            <svg *ngIf="student.approval_status === 'disapproved' && student.graduationStatus === 'active'" 
+                 class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            
+            <!-- Graduated Icon -->
+            <svg *ngIf="student.graduationStatus === 'graduated'" 
+                 class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"></path>
             </svg>
           </div>
           
           <div>
             <p class="font-semibold"
-               [class.text-green-700]="selectedTerm.approved"
-               [class.text-yellow-700]="!selectedTerm.approved">
-              {{ selectedTerm.approved ? 'Approved for Registration' : 'Pending Approval' }}
+               [class.text-green-700]="student.approval_status === 'approved' && student.graduationStatus === 'active'"
+               [class.text-red-700]="student.approval_status === 'disapproved' && student.graduationStatus === 'active'"
+               [class.text-gray-700]="student.graduationStatus === 'graduated'">
+              
+              <span *ngIf="student.graduationStatus === 'graduated'">Graduated</span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'approved'">
+                Approved for {{ student.nextSemesterRegistration }}
+              </span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'disapproved'">
+                Disapproved for {{ student.nextSemesterRegistration }}
+              </span>
             </p>
+            
             <p class="text-sm academic-muted">
-              {{ selectedTerm.approved ? 'Student can register for next term' : 'Approval required for next term registration' }}
+              <span *ngIf="student.graduationStatus === 'graduated'">
+                Student has completed all academic requirements
+              </span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'approved'">
+                Student can register for next semester
+              </span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'disapproved'">
+                Approval required for next semester registration
+              </span>
             </p>
           </div>
-        </div>
-
-        <button
-          (click)="toggleApproval()"
-          class="px-6 py-2 rounded-lg font-medium transition-all duration-200"
-          [class.btn-danger]="selectedTerm.approved"
-          [class.btn-success]="!selectedTerm.approved">
-          
-          {{ selectedTerm.approved ? 'Revoke Approval' : 'Approve Registration' }}
-        </button>
-      </div>
-
-      <!-- Not Published Message -->
-      <div *ngIf="!selectedTerm.resultPublished" 
-           class="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
-        <div class="text-center">
-          <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          <p class="text-lg font-medium text-gray-600">Results Not Published</p>
-          <p class="text-sm text-gray-500 mt-1">
-            This term's results are not yet available. Approval will be enabled once results are published.
-          </p>
         </div>
       </div>
     </div>
