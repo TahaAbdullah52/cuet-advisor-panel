@@ -1,0 +1,234 @@
+<!-- Academic Settings Page -->
+<div class="space-y-6">
+
+  <!-- Header -->
+  <div class="academic-card p-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold academic-title mb-2">
+          Account Settings
+        </h1>
+        <p class="academic-subtitle">
+          Manage your advisor account preferences and security
+        </p>
+      </div>
+      
+      <!-- Data Source Indicator -->
+      <div class="flex items-center space-x-2">
+        <div class="w-2 h-2 rounded-full" 
+             [class.bg-green-500]="!isUsingMockData"
+             [class.bg-yellow-500]="isUsingMockData"></div>
+        <span class="text-xs academic-muted">
+          {{ isUsingMockData ? 'Using Mock Authentication' : 'Connected to Database' }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Profile Information -->
+    <div class="lg:col-span-4 academic-card">
+      <div class="academic-card-header">
+        <h2 class="text-lg font-semibold academic-title">
+          Profile Information
+        </h2>
+        <p class="text-sm academic-muted mt-1">
+          Your current account details
+        </p>
+      </div>
+      
+      <div class="p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Full Name
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.name }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Email Address
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.email }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Department
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.department }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Designation
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.designation }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Phone Number
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.phone }}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Office Location
+            </label>
+            <div class="academic-input bg-slate-50 cursor-not-allowed">
+              {{ advisorInfo.office }}
+            </div>
+          </div>
+
+        </div>
+
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
+          <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <p class="text-sm font-medium text-blue-800">Profile Update Notice</p>
+              <p class="text-sm text-blue-700 mt-1">
+                To update your profile information, please contact the IT department or submit a request through the university portal.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Change Password Section -->
+  <div class="max-w-2xl academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        Change Password
+      </h2>
+      <p class="text-sm academic-muted mt-1">
+        Update your account password for security
+      </p>
+    </div>
+    
+    <div class="p-6">
+      <form (ngSubmit)="updatePassword()" #passwordForm="ngForm">
+        
+        <div class="space-y-4">
+          
+          <!-- Current Password -->
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Current Password
+            </label>
+            <input
+              type="password"
+              name="currentPassword"
+              [(ngModel)]="currentPassword"
+              required
+              class="academic-input"
+              placeholder="Enter your current password"
+              [disabled]="isLoading" />
+          </div>
+
+          <!-- New Password -->
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              New Password
+            </label>
+            <input
+              type="password"
+              name="newPassword"
+              [(ngModel)]="newPassword"
+              required
+              minlength="8"
+              class="academic-input"
+              placeholder="Enter new password (min 8 characters)"
+              [disabled]="isLoading" />
+          </div>
+
+          <!-- Confirm Password -->
+          <div>
+            <label class="block text-sm font-medium academic-text mb-2">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              name="confirmPassword"
+              [(ngModel)]="confirmPassword"
+              required
+              class="academic-input"
+              placeholder="Confirm your new password"
+              [disabled]="isLoading" />
+          </div>
+
+        </div>
+
+        <!-- Error Message -->
+        <div *ngIf="error" class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm text-red-700">{{ error }}</p>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div *ngIf="success" class="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <div class="flex items-center space-x-2">
+            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-sm text-green-700">Password updated successfully!</p>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="mt-6">
+          <button
+            type="submit"
+            [disabled]="!passwordForm.form.valid || isLoading"
+            class="btn-primary px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed">
+            
+            <span *ngIf="!isLoading">Update Password</span>
+            <span *ngIf="isLoading" class="flex items-center">
+              <svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Updating...
+            </span>
+          </button>
+        </div>
+
+      </form>
+
+      <!-- Password Requirements -->
+      <div class="mt-6 p-4 bg-slate-50 rounded-lg">
+        <h4 class="text-sm font-medium academic-text mb-2">Password Requirements:</h4>
+        <ul class="text-sm academic-muted space-y-1">
+          <li>• Minimum 8 characters long</li>
+          <li>• Must be different from current password</li>
+          <li>• Recommended: Include uppercase, lowercase, numbers, and symbols</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</div>

@@ -1,3 +1,359 @@
-/* You can add global styles to this file, and also import other style files */
+/* Remove horizontal scrollbar completely */
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+  height: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Ensure all containers respect viewport width */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.container, .max-w-full, .w-full {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Fixed layout styles */
+.fixed-layout {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.sidebar-fixed {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 16rem;
+  height: 100vh;
+  z-index: 40;
+  overflow-y: auto;
+}
+
+.main-content-offset {
+  margin-left: 16rem;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.navbar-fixed {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: calc(100% - 16rem);
+  z-index: 30;
+}
+
+/* Academic CUET Advisor Panel Styles */
 
 @import "tailwindcss";
+
+/* Academic Color Palette */
+:root {
+  --cuet-navy: #0f1b40;
+  --cuet-dark-gray: #1e293b;
+  --cuet-slate: #475569;
+  --cuet-light-slate: #64748b;
+  --cuet-bg: #f8fafc;
+  --cuet-border: #e2e8f0;
+}
+
+/* Global Academic Styling */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--cuet-bg);
+  color: var(--cuet-dark-gray);
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Academic Typography */
+.academic-title {
+  color: var(--cuet-navy);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.academic-subtitle {
+  color: var(--cuet-slate);
+  font-weight: 500;
+}
+
+.academic-text {
+  color: var(--cuet-dark-gray);
+}
+
+.academic-muted {
+  color: var(--cuet-light-slate);
+}
+
+/* Academic Cards */
+.academic-card {
+  background: white;
+  border: 1px solid var(--cuet-border);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.academic-card:hover {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+}
+
+.academic-card-header {
+  border-bottom: 1px solid var(--cuet-border);
+  padding: 1rem 1.5rem;
+  background: #fafbfc;
+}
+
+/* Academic Buttons */
+.btn-primary {
+  background-color: var(--cuet-navy);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #1a2951;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(15, 27, 64, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(15, 27, 64, 0.3);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--cuet-slate);
+  border: 1px solid var(--cuet-border);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #f8fafc;
+  border-color: var(--cuet-slate);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+}
+
+.btn-success {
+  background-color: #059669;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-success:hover {
+  background-color: #047857;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+/* Academic Tables */
+.academic-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  table-layout: fixed; /* Prevent table from expanding beyond container */
+}
+
+.academic-table th {
+  background-color: #f8fafc;
+  color: var(--cuet-navy);
+  font-weight: 600;
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  border-bottom: 2px solid var(--cuet-border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.academic-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--cuet-border);
+  color: var(--cuet-dark-gray);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.academic-table tbody tr {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.academic-table tbody tr:hover {
+  background-color: #f8fafc;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Academic Status Badges */
+.status-approved {
+  background-color: #dcfce7;
+  color: #166534;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.status-approved:hover {
+  background-color: #bbf7d0;
+  transform: scale(1.05);
+}
+
+.status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.status-pending:hover {
+  background-color: #fde68a;
+  transform: scale(1.05);
+}
+
+/* Academic Form Elements */
+.academic-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--cuet-border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.academic-input:focus {
+  outline: none;
+  border-color: var(--cuet-navy);
+  box-shadow: 0 0 0 3px rgba(15, 27, 64, 0.1);
+  transform: scale(1.02);
+}
+
+.academic-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--cuet-border);
+  border-radius: 6px;
+  background-color: white;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.academic-select:focus {
+  outline: none;
+  border-color: var(--cuet-navy);
+  box-shadow: 0 0 0 3px rgba(15, 27, 64, 0.1);
+}
+
+/* Academic Layout */
+.academic-sidebar {
+  background-color: var(--cuet-navy);
+  color: white;
+}
+
+.academic-navbar {
+  background-color: white;
+  border-bottom: 1px solid var(--cuet-border);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Clickable Row Effect */
+.clickable-row {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.clickable-row:hover {
+  background-color: #f1f5f9 !important;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive Table Container */
+.overflow-x-auto {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+}
+
+/* Main layout container */
+.main-content {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Grid responsive fixes */
+.grid {
+  max-width: 100%;
+}
+
+/* Flex container fixes */
+.flex {
+  max-width: 100%;
+  flex-wrap: wrap;
+}

@@ -1,0 +1,232 @@
+<!-- Academic Students Management -->
+<div class="space-y-6">
+
+  <!-- Header Section -->
+  <div class="academic-card p-6 mt-5">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold academic-title mb-2">
+          Student Management
+        </h1>
+        <p class="academic-subtitle">
+          Approve and View Student Performance
+        </p>
+      </div>
+      <div class="text-right">
+        <p class="text-sm academic-muted">Total Students</p>
+        <p class="text-2xl font-bold text-blue-900">{{ filteredStudents.length }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="academic-card p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold academic-title">Search & Filter</h2>
+      <div class="flex space-x-3">
+        <!-- Approve All Button -->
+        <button 
+          *ngIf="pendingStudentsCount > 0"
+          (click)="approveAll()"
+          class="btn-success px-4 py-2 flex items-center space-x-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>Approve All ({{ pendingStudentsCount }})</span>
+        </button>
+        
+        <button 
+          (click)="clearFilters()"
+          class="btn-secondary text-sm">
+          Clear All Filters
+        </button>
+      </div>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      
+      <!-- Search by ID -->
+      <div>
+        <label class="block text-sm font-medium academic-text mb-2">
+          Student ID
+        </label>
+        <input
+          type="text"
+          placeholder="e.g., 2104040"
+          class="academic-input"
+          [(ngModel)]="searchId" />
+      </div>
+
+      <!-- Filter by Approval Status -->
+      <div>
+        <label class="block text-sm font-medium academic-text mb-2">
+          Approval Status
+        </label>
+        <select
+          class="academic-select"
+          [(ngModel)]="selectedApprovalStatus">
+          <option *ngFor="let status of approvalStatusOptions" [value]="status.value">
+            {{ status.label }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Filter by Batch -->
+      <div>
+        <label class="block text-sm font-medium academic-text mb-2">
+          Batch
+        </label>
+        <select
+          class="academic-select"
+          [(ngModel)]="selectedBatch">
+          <option value="">All Batches</option>
+          <option *ngFor="let b of batches" [value]="b">
+            Batch {{ b }}
+          </option>
+        </select>
+      </div>
+
+      <!-- Results Count -->
+      <div class="flex items-end">
+        <div class="academic-card p-3 w-full bg-slate-50">
+          <p class="text-xs academic-muted">Showing Results</p>
+          <p class="text-lg font-semibold academic-title">
+            {{ filteredStudents.length }} / {{ students.length }}
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Students Table -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-lg font-semibold academic-title">
+            Student List
+          </h2>
+          <p class="text-sm academic-muted mt-1">
+            Page {{ page }} of {{ totalPages }} ({{ pageSize }} students per page)
+          </p>
+        </div>
+        <div class="text-sm academic-muted">
+          Click on any row to view student details
+        </div>
+      </div>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="academic-table">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>Next Registration</th>
+            <th>CGPA</th>
+            <th>Registration Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let s of paginatedStudents" 
+              class="clickable-row"
+              (click)="viewStudentDetails(s)">
+
+            <!-- Student ID -->
+            <td class="font-mono font-medium">{{ s.studentId }}</td>
+
+            <!-- Name -->
+            <td class="font-medium">{{ s.name }}</td>
+
+            <!-- Next Semester Registration -->
+            <td>
+              <span class="px-2 py-1 rounded text-xs font-medium"
+                    [class.bg-green-100]="s.nextSemesterRegistration === 'Graduated'"
+                    [class.text-green-700]="s.nextSemesterRegistration === 'Graduated'"
+                    [class.bg-slate-100]="s.nextSemesterRegistration !== 'Graduated'"
+                    [class.text-slate-700]="s.nextSemesterRegistration !== 'Graduated'">
+                {{ s.nextSemesterRegistration }}
+              </span>
+            </td>
+
+            <!-- CGPA -->
+            <td>
+              <span class="font-semibold"
+                    [class.text-green-600]="s.overallCgpa >= 3.5"
+                    [class.text-yellow-600]="s.overallCgpa >= 3.0 && s.overallCgpa < 3.5"
+                    [class.text-red-600]="s.overallCgpa < 3.0">
+                {{ s.overallCgpa }}
+              </span>
+            </td>
+
+            <!-- Approval Status -->
+            <td>
+              <span *ngIf="getApprovalStatus(s) === 'Approved'" class="status-approved">
+                 Approved
+              </span>
+              <span *ngIf="getApprovalStatus(s) === 'Pending'" class="status-pending">
+                 Pending
+              </span>
+              <span *ngIf="getApprovalStatus(s) === 'Graduated'" class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+                Graduated
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              <div class="flex items-center space-x-2">
+                
+                <!-- View Details -->
+                <a
+                  [routerLink]="['/students', s.studentId]"
+                  class="btn-secondary text-xs px-3 py-1"
+                  (click)="$event.stopPropagation()">
+                  View Details
+                </a>
+
+                <!-- Quick Approve/Unapprove (only if not graduated) -->
+                <button
+                  *ngIf="s.nextSemesterRegistration !== 'Graduated'"
+                  (click)="toggleApproval(s, $event)"
+                  class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
+                  [class.btn-success]="getApprovalStatus(s) === 'Pending'"
+                  [class.btn-danger]="getApprovalStatus(s) === 'Approved'">
+                  
+                  <span *ngIf="getApprovalStatus(s) === 'Pending'">Approve</span>
+                  <span *ngIf="getApprovalStatus(s) === 'Approved'">Revoke</span>
+                </button>
+
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="paginatedStudents.length === 0">
+            <td colspan="6" class="p-8 text-center">
+              <div class="flex flex-col items-center space-y-3">
+                <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                </svg>
+                <p class="text-lg font-medium academic-text">No students found</p>
+                <p class="text-sm academic-muted">Try adjusting your search criteria</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-center">
+    <app-pagination
+      [page]="page"
+      [totalPages]="totalPages"
+      (pageChange)="onPageChange($event)">
+    </app-pagination>
+  </div>
+
+</div>

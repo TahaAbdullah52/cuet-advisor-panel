@@ -1,0 +1,184 @@
+<!-- Academic Dashboard -->
+<div class="space-y-8">
+
+  <!-- Welcome Section -->
+  <div class="academic-card p-6 mt-5">
+    <div class="flex items-center justify-between">
+      <div class="flex-1">
+        <h1 class="text-2xl font-bold academic-title mb-2">
+          Welcome to CUET Advisor Dashboard
+        </h1>
+        <p class="academic-subtitle">
+          Computer Science & Engineering Department -
+        </p>
+        
+        <!-- Data Source Indicator -->
+        <div class="flex items-center space-x-4 mt-3">
+          <div class="flex items-center space-x-2">
+          
+          <button 
+            (click)="refreshData()"
+            [disabled]="isLoading"
+            class="btn-secondary text-xs px-3 py-1 flex items-center space-x-1">
+            <svg class="w-3 h-3" [class.animate-spin]="isLoading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>{{ isLoading ? 'Loading...' : 'Refresh' }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Cards Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-10">
+    
+    <app-stat-card
+      label="Total Students"
+      [value]="isLoading ? '...' : totalStudents"
+      icon="users"
+      color="blue">
+    </app-stat-card>
+
+    <app-stat-card
+      label="Approved for Registration"
+      [value]="isLoading ? '...' : approvedCount"
+      icon="check"
+      color="green">
+    </app-stat-card>
+
+    <app-stat-card
+      label="Pending Approval"
+      [value]="isLoading ? '...' : pendingCount"
+      icon="clock"
+      color="yellow">
+    </app-stat-card>
+
+    <app-stat-card
+      label="Average CGPA"
+      [value]="isLoading ? '...' : averageCgpa"
+      icon="chart"
+      color="purple">
+    </app-stat-card>
+
+  </div>
+
+  <!-- Highlight Cards Row -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    
+    <!-- Highest Performer -->
+    <div class="academic-card p-6">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm academic-muted mb-1">Top Performer</p>
+          <p *ngIf="highestCgpaStudent" class="text-lg font-semibold academic-title">{{ highestCgpaStudent.name }}</p>
+          <p *ngIf="highestCgpaStudent" class="text-sm academic-text">CGPA: {{ highestCgpaStudent.overallCgpa }} | ID: {{ highestCgpaStudent.studentId }}</p>
+          <p *ngIf="!highestCgpaStudent" class="text-lg font-semibold text-gray-500">No results available</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approval Rate -->
+    <div class="academic-card p-6">
+      <div class="flex items-center space-x-4">
+        <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+          <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <p class="text-sm academic-muted mb-1">Registration Approval Rate</p>
+          <p class="text-2xl font-bold academic-title">{{ approvalRate }}%</p>
+          <p class="text-sm academic-text">{{ approvedCount }} of {{ totalStudents }} students approved</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Batch Performance Chart -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        Batch-wise Academic Performance
+      </h2>
+      <p class="text-sm academic-muted mt-1">
+        Average CGPA comparison across different batches
+      </p>
+      <!-- Debug Info -->
+      <!-- <div class="text-xs text-gray-500 mt-2">
+        Debug: Labels: {{ batchLabels.length }}, Values: {{ batchGpaValues.length }}
+      </div> -->
+    </div>
+    
+    <div class="p-6">
+      <div *ngIf="batchLabels.length > 0 && batchGpaValues.length > 0; else noChartData">
+        <app-gpa-chart
+          [labels]="batchLabels"
+          [values]="batchGpaValues"
+          chartLabel="Average CGPA"
+          chartType="bar">
+        </app-gpa-chart>
+      </div>
+      <ng-template #noChartData>
+        <div class="text-center py-8">
+          <p class="text-gray-500">No chart data available</p>
+          <p class="text-xs text-gray-400">Labels: {{ batchLabels | json }}</p>
+          <p class="text-xs text-gray-400">Values: {{ batchGpaValues | json }}</p>
+        </div>
+      </ng-template>
+    </div>
+  </div>
+
+  <!-- Batch Statistics Table -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        Detailed Batch Statistics
+      </h2>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="academic-table">
+        <thead>
+          <tr>
+            <th>Batch</th>
+            <th>Total Students</th>
+            <th>Average CGPA</th>
+            <th>Approved</th>
+            <th>Pending</th>
+            <th>Approval Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let batch of batchStats">
+            <td class="font-semibold">{{ batch.batch }}</td>
+            <td>{{ batch.totalStudents }}</td>
+            <td>
+              <span class="font-medium text-slate-700">
+                {{ batch.averageGpa }}
+              </span>
+            </td>
+            <td>
+              <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">{{ batch.approvedCount }}</span>
+            </td>
+            <td>
+              <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">{{ batch.totalStudents - batch.approvedCount }}</span>
+            </td>
+            <td>
+              <span class="font-medium text-slate-700">
+                {{ ((batch.approvedCount / batch.totalStudents) * 100).toFixed(1) }}%
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

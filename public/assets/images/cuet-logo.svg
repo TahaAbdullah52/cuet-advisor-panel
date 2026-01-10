@@ -1,0 +1,7 @@
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <!-- CUET Logo SVG - Simple representation -->
+  <circle cx="50" cy="50" r="45" fill="#0f1b40" stroke="#ffffff" stroke-width="2"/>
+  <text x="50" y="35" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="12" font-weight="bold">CUET</text>
+  <text x="50" y="55" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8">চুয়েট</text>
+  <text x="50" y="70" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="6">EST. 1968</text>
+</svg>

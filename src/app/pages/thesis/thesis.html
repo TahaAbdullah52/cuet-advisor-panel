@@ -1,0 +1,343 @@
+<!-- Thesis Management -->
+<div class="space-y-6">
+
+  <!-- Header Section -->
+  <div class="academic-card p-6 mt-5" *ngIf="!selectedStudent">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold academic-title mb-2">
+          Thesis Management
+        </h1>
+        <p class="academic-subtitle">
+          Manage thesis assignments and track student progress
+        </p>
+      </div>
+      <div class="flex flex-col items-end space-y-4">
+        <div class="text-right">
+          <p class="text-sm academic-muted">Thesis Eligible Students</p>
+          <p class="text-2xl font-bold text-blue-900">{{ students.length }}</p>
+        </div>
+        <button 
+          (click)="toggleAddStudentForm()"
+          class="btn-primary flex items-center space-x-2 mt-5">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+          <span>Add Student</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Student Form -->
+  <div *ngIf="showAddStudentForm && !selectedStudent" class="academic-card p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-lg font-semibold academic-title">Add New Student to Thesis</h2>
+      <button 
+        (click)="toggleAddStudentForm()"
+        class="btn-secondary text-sm">
+        Cancel
+      </button>
+    </div>
+    
+    <form (ngSubmit)="addStudent()" #addStudentForm="ngForm">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Student Name -->
+        <div>
+          <label class="block text-sm font-medium academic-text mb-2">
+            Student Name
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="newStudent.name"
+            name="studentName"
+            required
+            class="academic-input"
+            placeholder="e.g., Md. Rahman Ahmed"
+            [disabled]="isAddingStudent">
+        </div>
+
+        <!-- Student ID -->
+        <div>
+          <label class="block text-sm font-medium academic-text mb-2">
+            Student ID
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="newStudent.studentId"
+            name="studentId"
+            required
+            pattern="[0-9]{7}"
+            class="academic-input"
+            placeholder="e.g., 2004001"
+            [disabled]="isAddingStudent">
+        </div>
+
+      </div>
+
+      <div class="flex justify-end mt-4">
+        <button
+          type="submit"
+          [disabled]="!addStudentForm.form.valid || isAddingStudent"
+          class="btn-success px-6 py-2 disabled:opacity-50">
+          
+          <span *ngIf="!isAddingStudent">Add Student</span>
+          <span *ngIf="isAddingStudent" class="flex items-center space-x-2">
+            <svg class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Adding...</span>
+          </span>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Student List View -->
+  <div *ngIf="!selectedStudent" class="academic-card">
+    
+    <div class="overflow-x-auto">
+      <table class="academic-table">
+        <thead>
+          <tr>
+            <th>Student ID</th>
+            <th>Name</th>
+            <th>CGPA</th>
+            <th>Thesis Topic Assigned</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let student of students" 
+              class="clickable-row"
+              (click)="selectStudent(student)">
+
+            <!-- Student ID -->
+            <td class="font-mono font-medium">{{ student.studentId }}</td>
+
+            <!-- Name -->
+            <td class="font-medium">{{ student.name }}</td>
+
+            <!-- CGPA -->
+            <td>
+              <span class="font-semibold"
+                    [class.text-green-600]="student.overallCgpa >= 3.5"
+                    [class.text-yellow-600]="student.overallCgpa >= 3.0 && student.overallCgpa < 3.5"
+                    [class.text-red-600]="student.overallCgpa < 3.0">
+                {{ student.overallCgpa }}
+              </span>
+            </td>
+
+            <!-- Thesis Status -->
+            <td>
+              <span class="px-3 py-1 rounded-full text-sm font-medium"
+                    [class.bg-green-100]="getThesisStatus(student) === 'Assigned'"
+                    [class.text-green-700]="getThesisStatus(student) === 'Assigned'"
+                    [class.bg-yellow-100]="getThesisStatus(student) === 'Not Assigned'"
+                    [class.text-yellow-700]="getThesisStatus(student) === 'Not Assigned'">
+                {{ getThesisStatus(student) }}
+              </span>
+            </td>
+
+            <!-- Actions -->
+            <td>
+              <div class="flex items-center space-x-2">
+                <button
+                  (click)="selectStudent(student); $event.stopPropagation()"
+                  class="btn-primary text-xs px-3 py-1">
+                  Manage Thesis
+                </button>
+                <button
+                  (click)="removeStudent(student); $event.stopPropagation()"
+                  class="btn-danger text-xs px-3 py-1">
+                  Remove
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Empty State -->
+          <tr *ngIf="students.length === 0">
+            <td colspan="5" class="p-8 text-center">
+              <div class="flex flex-col items-center space-y-3">
+                <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                </svg>
+                <p class="text-lg font-medium academic-text">No thesis students found</p>
+                <p class="text-sm academic-muted">Final year students will appear here</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Individual Student Thesis Management -->
+  <div *ngIf="selectedStudent" class="space-y-6 mt-5">
+    
+    <!-- Back Button and Header -->
+    <div class="flex items-center space-x-4">
+      <button 
+        (click)="backToList()"
+        class="btn-secondary flex items-center space-x-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        <span>Back to Thesis List</span>
+      </button>
+      
+      <div>
+        <h1 class="text-2xl font-bold academic-title">
+          Thesis Management 
+        </h1>
+        
+      </div>
+    </div>
+
+    <!-- Student Basic Info -->
+    <div class="academic-card p-6">
+      <h2 class="text-lg font-semibold academic-title mb-4">Student Information</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div>
+          <p class="text-sm academic-muted mb-1">Student Name</p>
+          <p class="text-lg font-semibold academic-title">{{ selectedStudent.name }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Student ID</p>
+          <p class="text-lg font-mono font-semibold academic-title">{{ selectedStudent.studentId }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Email</p>
+          <p class="text-lg academic-title">{{ selectedStudent.email }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Overall CGPA</p>
+          <p class="text-2xl font-bold"
+             [class.text-green-600]="selectedStudent.overallCgpa >= 3.5"
+             [class.text-yellow-600]="selectedStudent.overallCgpa >= 3.0 && selectedStudent.overallCgpa < 3.5"
+             [class.text-red-600]="selectedStudent.overallCgpa < 3.0">
+            {{ selectedStudent.overallCgpa }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Academic Performance (8 Semesters CGPA Only) -->
+    <div class="academic-card p-6">
+      <h2 class="text-lg font-semibold academic-title mb-4">Academic Performance (All Semesters)</h2>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div *ngFor="let term of getTermCgpaData()" 
+             class="bg-slate-50 p-4 rounded-lg text-center">
+          <p class="text-sm academic-muted mb-1">{{ term.termId }}</p>
+          <p class="text-xl font-bold"
+             [class.text-green-600]="term.cgpa >= 3.5"
+             [class.text-yellow-600]="term.cgpa >= 3.0 && term.cgpa < 3.5"
+             [class.text-red-600]="term.cgpa < 3.0">
+            {{ term.cgpa }}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thesis Information Form -->
+    <div class="academic-card p-6">
+      <h2 class="text-lg font-semibold academic-title mb-4">Thesis Information</h2>
+      
+      <form (ngSubmit)="updateThesisInfo()" #thesisFormRef="ngForm">
+        
+        <!-- Topic Assignment Status -->
+        <div class="mb-6">
+          <label class="flex items-center space-x-3">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="thesisForm.topicAssigned"
+              name="topicAssigned"
+              class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500">
+            <span class="text-sm font-medium academic-text">Thesis Topic Assigned</span>
+          </label>
+        </div>
+
+        <!-- Thesis Topic Name -->
+        <div class="mb-6" *ngIf="thesisForm.topicAssigned">
+          <label class="block text-sm font-medium academic-text mb-2">
+            Thesis Topic Name
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="thesisForm.topicName"
+            name="topicName"
+            class="academic-input"
+            placeholder="Enter thesis topic name"
+            [required]="thesisForm.topicAssigned">
+        </div>
+
+        <!-- Defense Date -->
+        <div class="mb-6" *ngIf="thesisForm.topicAssigned">
+          <label class="block text-sm font-medium academic-text mb-2">
+            Defense Date
+          </label>
+          <input
+            type="date"
+            [(ngModel)]="thesisForm.defenseDate"
+            name="defenseDate"
+            class="academic-input">
+        </div>
+
+        <!-- Assigned Task -->
+        <div class="mb-6" *ngIf="thesisForm.topicAssigned">
+          <label class="block text-sm font-medium academic-text mb-2">
+            Assigned Task
+          </label>
+          <textarea
+            [(ngModel)]="thesisForm.assignedTask"
+            name="assignedTask"
+            rows="3"
+            class="academic-input"
+            placeholder="Describe the current assigned task"></textarea>
+        </div>
+
+        <!-- Meeting Date-Time -->
+        <div class="mb-6" *ngIf="thesisForm.topicAssigned">
+          <label class="block text-sm font-medium academic-text mb-2">
+            Next Meeting Date & Time
+          </label>
+          <input
+            type="datetime-local"
+            [(ngModel)]="thesisForm.meetingDateTime"
+            name="meetingDateTime"
+            class="academic-input">
+        </div>
+
+        <!-- Update Button -->
+        <div class="flex justify-end">
+          <button
+            type="submit"
+            [disabled]="isUpdating || !thesisFormRef.form.valid"
+            class="btn-primary px-6 py-2 disabled:opacity-50">
+            
+            <span *ngIf="!isUpdating">Update Thesis Information</span>
+            <span *ngIf="isUpdating" class="flex items-center space-x-2">
+              <svg class="animate-spin w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Updating...</span>
+            </span>
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+  </div>
+
+</div>

@@ -1,0 +1,25 @@
+<!-- Academic Navbar -->
+<header class="academic-navbar px-6 py-4 flex items-center justify-between w-full">
+  
+  <!-- Page Title & Breadcrumb -->
+  <div class="flex-1 min-w-0">
+    <h1 class="text-xl font-semibold academic-title truncate">
+      {{ currentPageTitle }}
+    </h1>
+    <p class="text-sm academic-muted mt-1 truncate">
+      CUET Advisor Panel - Computer Science & Engineering
+    </p>
+  </div>
+
+  <!-- Right Side Info -->
+  <div class="flex items-center space-x-4 flex-shrink-0 mr-10">
+
+    <!-- Current Date -->
+    <div class="text-right hidden sm:block">
+      <p class="text-sm font-medium academic-text">{{ getCurrentDate() }}</p>
+      <p class="text-xs academic-muted">{{ getCurrentTime() }}</p>
+    </div>
+
+  </div>
+
+</header>

@@ -1,0 +1,325 @@
+<!-- Academic Student Details -->
+<div class="space-y-6" *ngIf="student">
+
+  <!-- Header with Back Button -->
+  <div class="flex items-center space-x-4 mt-5">
+    <button 
+      (click)="goBack()"
+      class="btn-secondary flex items-center space-x-2">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+      </svg>
+      <span>Back to Students</span>
+    </button>
+    
+    <div>
+      <h1 class="text-2xl font-bold academic-title">
+        Student Profile
+      </h1>
+      <p class="academic-subtitle">
+        Detailed academic information and performance
+      </p>
+    </div>
+  </div>
+
+  <!-- Student Basic Information -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        Student Information
+      </h2>
+    </div>
+    
+    <div class="p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        
+        <div class="text-center md:text-left">
+          <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto md:mx-0 mb-3">
+            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+          </div>
+          <p class="text-sm academic-muted">Student Name</p>
+          <p class="text-lg font-semibold academic-title">{{ student.name }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Student ID</p>
+          <p class="text-lg font-mono font-semibold academic-title">{{ student.studentId }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Email</p>
+          <p class="text-lg academic-title">{{ student.email }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Batch</p>
+          <p class="text-lg font-semibold academic-title">
+            <span class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+              Batch {{ student.batch }}
+            </span>
+          </p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted mb-1">Overall CGPA</p>
+          <p class="text-2xl font-bold"
+             [class.text-green-600]="student.overallCgpa >= 3.5"
+             [class.text-yellow-600]="student.overallCgpa >= 3.0 && student.overallCgpa < 3.5"
+             [class.text-red-600]="student.overallCgpa < 3.0">
+            {{ student.overallCgpa }}
+          </p>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Academic Performance Chart -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        Academic Performance Trend
+      </h2>
+      <p class="text-sm academic-muted mt-1">
+        GPA progression across terms
+      </p>
+    </div>
+    
+    <div class="p-6">
+      <app-gpa-chart
+        [labels]="termLabels"
+        [values]="termGpaValues"
+        chartType="line"
+        chartLabel="Term GPA">
+      </app-gpa-chart>
+    </div>
+  </div>
+
+  <!-- Term Selection -->
+  <div class="academic-card p-6">
+    <h2 class="text-lg font-semibold academic-title mb-4">
+      Academic Terms (All 8 Semesters)
+    </h2>
+    
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <button
+        *ngFor="let t of student.terms"
+        (click)="selectTerm(t)"
+        class="p-3 rounded-lg font-medium transition-all duration-200 text-left"
+        [class.bg-blue-900]="selectedTerm.termId === t.termId"
+        [class.text-white]="selectedTerm.termId === t.termId"
+        [class.btn-secondary]="selectedTerm.termId !== t.termId"
+        [class.opacity-60]="!t.resultPublished">
+        
+        <div class="flex flex-col">
+          <span class="font-semibold">{{ t.termId }}</span>
+          <span class="text-xs mt-1" [ngClass]="getTermStatusColor(t)">
+            {{ getTermStatus(t) }}
+          </span>
+          <span *ngIf="t.resultPublished" class="text-xs mt-1 opacity-75">
+            GPA: {{ t.gpa }}
+          </span>
+        </div>
+      </button>
+    </div>
+    
+    <div class="mt-4 p-3 bg-blue-50 rounded-lg">
+      <p class="text-sm text-blue-800">
+        <strong>Legend:</strong> 
+        <span class="text-green-600">● Approved</span> | 
+        <span class="text-yellow-600">● Pending</span> | 
+        <span class="text-gray-500">● Not Published</span>
+      </p>
+    </div>
+  </div>
+
+  <!-- Term Details & Approval -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- Term Summary -->
+    <div class="academic-card p-6">
+      <h3 class="text-lg font-semibold academic-title mb-4">
+        {{ selectedTerm.termId }} Summary
+      </h3>
+      
+      <div class="space-y-4">
+        <div>
+          <p class="text-sm academic-muted">Term GPA</p>
+          <p *ngIf="selectedTerm.resultPublished" class="text-2xl font-bold"
+             [class.text-green-600]="selectedTerm.gpa >= 3.5"
+             [class.text-yellow-600]="selectedTerm.gpa >= 3.0 && selectedTerm.gpa < 3.5"
+             [class.text-red-600]="selectedTerm.gpa < 3.0">
+            {{ selectedTerm.gpa }}
+          </p>
+          <p *ngIf="!selectedTerm.resultPublished" class="text-lg text-gray-500 font-medium">
+            Result Not Published
+          </p>
+        </div>
+        
+        <div>
+          <p class="text-sm academic-muted">Total Credits</p>
+          <p class="text-lg font-semibold academic-title">{{ getTotalCredits() }}</p>
+        </div>
+        
+        <div>
+          <p class="text-sm academic-muted">Total Courses</p>
+          <p class="text-lg font-semibold academic-title">{{ selectedTerm.courses.length }}</p>
+        </div>
+
+        <div>
+          <p class="text-sm academic-muted">Result Status</p>
+          <span class="px-3 py-1 rounded-full text-sm font-medium"
+                [class.bg-green-100]="selectedTerm.resultPublished"
+                [class.text-green-700]="selectedTerm.resultPublished"
+                [class.bg-gray-100]="!selectedTerm.resultPublished"
+                [class.text-gray-700]="!selectedTerm.resultPublished">
+            {{ selectedTerm.resultPublished ? 'Published' : 'Not Published' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Registration Approval -->
+    <div class="lg:col-span-2 academic-card p-6">
+      <h3 class="text-lg font-semibold academic-title mb-4">
+        Registration Approval
+      </h3>
+      
+      <div *ngIf="selectedTerm.resultPublished" 
+           class="flex items-center justify-between p-4 rounded-lg"
+           [class.bg-green-50]="selectedTerm.approved"
+           [class.bg-yellow-50]="!selectedTerm.approved">
+        
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center"
+               [class.bg-green-100]="selectedTerm.approved"
+               [class.bg-yellow-100]="!selectedTerm.approved">
+            <svg *ngIf="selectedTerm.approved" class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <svg *ngIf="!selectedTerm.approved" class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          
+          <div>
+            <p class="font-semibold"
+               [class.text-green-700]="selectedTerm.approved"
+               [class.text-yellow-700]="!selectedTerm.approved">
+              {{ selectedTerm.approved ? 'Approved for Registration' : 'Pending Approval' }}
+            </p>
+            <p class="text-sm academic-muted">
+              {{ selectedTerm.approved ? 'Student can register for next term' : 'Approval required for next term registration' }}
+            </p>
+          </div>
+        </div>
+
+        <button
+          (click)="toggleApproval()"
+          class="px-6 py-2 rounded-lg font-medium transition-all duration-200"
+          [class.btn-danger]="selectedTerm.approved"
+          [class.btn-success]="!selectedTerm.approved">
+          
+          {{ selectedTerm.approved ? 'Revoke Approval' : 'Approve Registration' }}
+        </button>
+      </div>
+
+      <!-- Not Published Message -->
+      <div *ngIf="!selectedTerm.resultPublished" 
+           class="flex items-center justify-center p-8 bg-gray-50 rounded-lg">
+        <div class="text-center">
+          <svg class="w-12 h-12 text-gray-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <p class="text-lg font-medium text-gray-600">Results Not Published</p>
+          <p class="text-sm text-gray-500 mt-1">
+            This term's results are not yet available. Approval will be enabled once results are published.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Course Details Table -->
+  <div class="academic-card">
+    <div class="academic-card-header">
+      <h2 class="text-lg font-semibold academic-title">
+        {{ selectedTerm.termId }} - Course Details
+      </h2>
+      <p class="text-sm academic-muted mt-1">
+        {{ selectedTerm.resultPublished ? 'Complete course list with grades and credits' : 'Course list - Results pending publication' }}
+      </p>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="academic-table">
+        <thead>
+          <tr>
+            <th>Course Code</th>
+            <th>Credit Hours</th>
+            <th>Course Type</th>
+            <th>Sessional</th>
+            <th>Grade</th>
+            <th *ngIf="selectedTerm.resultPublished">Grade Points</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let course of selectedTerm.courses">
+            
+            <td class="font-mono font-semibold">{{ course.courseCode }}</td>
+            
+            <td>{{ course.courseCredit }}</td>
+            
+            <td>
+              <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium capitalize">
+                {{ course.courseType }}
+              </span>
+            </td>
+            
+            <td>
+              <span class="px-2 py-1 rounded text-xs font-medium"
+                    [class.bg-blue-100]="course.sessional"
+                    [class.text-blue-700]="course.sessional"
+                    [class.bg-gray-100]="!course.sessional"
+                    [class.text-gray-700]="!course.sessional">
+                {{ course.sessional ? 'Yes' : 'No' }}
+              </span>
+            </td>
+            
+            <td>
+              <span class="font-bold text-lg" [ngClass]="getGradeColor(course.result)">
+                {{ course.result }}
+              </span>
+            </td>
+            
+            <td *ngIf="selectedTerm.resultPublished" class="font-medium">
+              <span [ngClass]="getGradeColor(course.result)">
+                {{ course.result === 'A+' ? '4.00' : 
+                   course.result === 'A' ? '3.75' : 
+                   course.result === 'A-' ? '3.50' : 
+                   course.result === 'B+' ? '3.25' : 
+                   course.result === 'B' ? '3.00' : '2.75' }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Loading/Error State -->
+<div *ngIf="!student" class="flex items-center justify-center min-h-96">
+  <div class="text-center">
+    <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+    </svg>
+    <p class="text-lg font-medium academic-text">Student not found</p>
+    <p class="text-sm academic-muted">The requested student could not be located</p>
+  </div>
+</div>
