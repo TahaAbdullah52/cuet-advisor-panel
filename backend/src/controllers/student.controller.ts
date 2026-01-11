@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Student from '../models/Student.model';
 import { AuthRequest } from '../types/auth.types';
 import { generateApprovalEmail } from '../services/gemini.service';
+import { sendApprovalEmail } from '../services/email.service';
 
 /**
  * Get all students for logged-in advisor
@@ -309,6 +310,91 @@ export const generateApprovalContent = async (req: Request, res: Response): Prom
     res.status(500).json({
       status: 'error',
       message: error.message || 'Failed to generate content',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Send approval/disapproval email to student
+ * POST /api/students/send-approval-email
+ */
+export const sendApprovalEmailToStudent = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const advisorId = (req as unknown as AuthRequest).advisor?.id;
+    const { studentId, newStatus, emailContent } = req.body;
+
+    if (!advisorId) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized'
+      });
+      return;
+    }
+
+    // Validate inputs
+    if (!newStatus || !['approved', 'rejected'].includes(newStatus)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'newStatus must be either "approved" or "rejected"'
+      });
+      return;
+    }
+
+    if (!emailContent || emailContent.trim().length === 0) {
+      res.status(400).json({
+        status: 'error',
+        message: 'emailContent is required'
+      });
+      return;
+    }
+
+    // Find student with security check
+    const student = await Student.findOne({
+      student_id: studentId,
+      advisor_id: advisorId
+    });
+
+    if (!student) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Student not found'
+      });
+      return;
+    }
+
+    // Send email
+    await sendApprovalEmail(
+      student.email,
+      student.name,
+      emailContent,
+      newStatus as 'approved' | 'rejected'
+    );
+
+    // Update student approval status
+    student.approval_status = newStatus;
+    student.approval_date = new Date();
+    await student.save();
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        student: {
+          student_id: student.student_id,
+          name: student.name,
+          email: student.email,
+          approval_status: student.approval_status,
+          approval_date: student.approval_date
+        }
+      },
+      message: `Email sent successfully and student status updated to ${newStatus}`
+    });
+
+  } catch (error: any) {
+    console.error('Send approval email error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to send email',
       error: error.message
     });
   }
