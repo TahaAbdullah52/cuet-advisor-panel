@@ -16,6 +16,15 @@ export interface ITerm {
   term_credits?: number;
 }
 
+// Thesis information interface
+export interface IThesisInfo {
+  topicAssigned: boolean;
+  topicName?: string;
+  defenseDate?: string;
+  assignedTask?: string;
+  meetingDateTime?: string;
+}
+
 export interface IStudent extends Document {
   _id: mongoose.Types.ObjectId;
   student_id: string;
@@ -42,6 +51,9 @@ export interface IStudent extends Document {
   L3T2: ITerm;
   L4T1: ITerm;
   L4T2: ITerm;
+  
+  // Thesis information (optional)
+  thesisInfo?: IThesisInfo;
   
   createdAt: Date;
   updatedAt: Date;
@@ -92,6 +104,32 @@ const TermSchema = new Schema<ITerm>(
     term_credits: {
       type: Number,
       min: 0
+    }
+  },
+  { _id: false }
+);
+
+const ThesisInfoSchema = new Schema<IThesisInfo>(
+  {
+    topicAssigned: {
+      type: Boolean,
+      default: false
+    },
+    topicName: {
+      type: String,
+      trim: true
+    },
+    defenseDate: {
+      type: String,
+      trim: true
+    },
+    assignedTask: {
+      type: String,
+      trim: true
+    },
+    meetingDateTime: {
+      type: String,
+      trim: true
     }
   },
   { _id: false }
@@ -203,6 +241,12 @@ const StudentSchema = new Schema<IStudent>(
     L4T2: {
       type: TermSchema,
       default: { courses: [] }
+    },
+    
+    // Thesis information
+    thesisInfo: {
+      type: ThesisInfoSchema,
+      default: undefined
     }
   },
   {

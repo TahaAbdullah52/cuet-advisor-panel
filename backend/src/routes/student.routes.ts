@@ -7,6 +7,7 @@ import {
   generateApprovalContent,
   sendApprovalEmailToStudent
 } from '../controllers/student.controller';
+import { updateThesisInfo } from '../controllers/thesis.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -18,6 +19,7 @@ router.use(authMiddleware);
 router.get('/', getStudents);
 router.get('/:id', getStudentById);
 router.put('/:id', updateStudent);
+router.put('/:id/thesis', updateThesisInfo);
 router.post('/approve-multiple', approveMultiple);
 router.post('/generate-approval', generateApprovalContent);
 router.post('/send-approval-email', sendApprovalEmailToStudent);
