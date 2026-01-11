@@ -10,7 +10,6 @@ import { LoginCredentials } from '../../core/models';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './login.html',
-  styleUrl: './login.css',
 })
 export class Login {
   email = '';

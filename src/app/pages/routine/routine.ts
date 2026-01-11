@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
 
 import { RoutineEntry, TodaySchedule } from '../../core/routine.models';
-import { ApiService } from '../../core/api.service';
+import { RoutineService } from '../../core/routine.service';
 
 @Component({
   selector: 'app-routine',
@@ -22,6 +22,7 @@ export class Routine implements OnInit, OnDestroy {
   showAddForm = false;
   isLoading = false;
   isAddingRoutine = false;
+  isUsingMockData = false;
   currentTime = new Date();
   private subscription: Subscription = new Subscription();
 
@@ -40,10 +41,27 @@ export class Routine implements OnInit, OnDestroy {
   typeOptions = ['Class', 'Lab'];
   batchOptions = ['Batch 19', 'Batch 20', 'Batch 21', 'Batch 22', 'Batch 23', 'Batch 24'];
 
-  constructor(private apiService: ApiService) {}
+  constructor(private routineService: RoutineService) {}
 
   ngOnInit() {
-    this.loadRoutines();
+    // Check if using mock data
+    this.isUsingMockData = this.routineService.isUsingMockData();
+
+    // Subscribe to loading state
+    this.subscription.add(
+      this.routineService.loading$.subscribe(loading => {
+        this.isLoading = loading;
+      })
+    );
+
+    // Subscribe to routine updates
+    this.subscription.add(
+      this.routineService.routines$.subscribe(routines => {
+        this.allRoutines = routines;
+        this.updateTodaySchedule();
+        console.log('Routines loaded in component:', routines.length);
+      })
+    );
     
     // Update current time every minute
     this.subscription.add(
@@ -53,35 +71,18 @@ export class Routine implements OnInit, OnDestroy {
       })
     );
 
-    // Force initial data load if no routines after a short delay
-    setTimeout(() => {
-      if (this.allRoutines.length === 0) {
-        console.log('Routine: No routines found, loading...');
-        this.loadRoutines();
-      }
-    }, 100);
+    // Force initial data load if no routines
+    if (this.allRoutines.length === 0) {
+      this.routineService.refreshRoutines();
+    }
   }
 
   ngOnDestroy() {
     this.subscription.unsubscribe();
   }
 
-  loadRoutines() {
-    this.isLoading = true;
-    
-    this.apiService.getRoutines().subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.allRoutines = response.data;
-          this.updateTodaySchedule();
-        }
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading routines:', error);
-        this.isLoading = false;
-      }
-    });
+  refreshData() {
+    this.routineService.refreshRoutines();
   }
 
   updateTodaySchedule() {
@@ -142,38 +143,17 @@ export class Routine implements OnInit, OnDestroy {
 
     this.isAddingRoutine = true;
 
-    this.apiService.addRoutine(this.newRoutine).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          this.allRoutines.push(response.data);
-          this.updateTodaySchedule();
-          this.showAddForm = false;
-          this.resetForm();
-          console.log('Routine added successfully');
-        }
-        this.isAddingRoutine = false;
-      },
-      error: (error) => {
-        console.error('Error adding routine:', error);
-        this.isAddingRoutine = false;
-      }
-    });
+    this.routineService.addRoutine(this.newRoutine);
+    
+    // Reset form and hide it
+    this.showAddForm = false;
+    this.resetForm();
+    this.isAddingRoutine = false;
   }
 
   removeRoutine(routine: RoutineEntry) {
     if (confirm(`Are you sure you want to remove ${routine.courseName} from your routine?`)) {
-      this.apiService.removeRoutine(routine.id!).subscribe({
-        next: (response) => {
-          if (response.success) {
-            this.allRoutines = this.allRoutines.filter(r => r.id !== routine.id);
-            this.updateTodaySchedule();
-            console.log('Routine removed successfully');
-          }
-        },
-        error: (error) => {
-          console.error('Error removing routine:', error);
-        }
-      });
+      this.routineService.removeRoutine(routine.id!);
     }
   }
 

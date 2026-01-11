@@ -29,7 +29,7 @@ export class Students implements OnInit, OnDestroy {
   // ---- FILTER STATE ----
   searchId = '';
   selectedBatch = '';
-  selectedApprovalStatus = 'pending'; // Default to pending filter
+  selectedApprovalStatus = ''; // Default to registered filter
 
   // ---- PAGINATION ----
   page = 1;
@@ -42,6 +42,7 @@ export class Students implements OnInit, OnDestroy {
   isGeneratingContent = false;
   isSendingEmail = false;
   pendingApprovalAction: 'approved' | 'disapproved' | null = null;
+  useAIContent = true; // Toggle between AI and generic content
 
   // ---- CACHED COMPUTED VALUES ----
   private _filteredStudents: Student[] = [];
@@ -54,7 +55,8 @@ export class Students implements OnInit, OnDestroy {
     { value: '', label: 'All Status' },
     { value: 'approved', label: 'Approved' },
     { value: 'disapproved', label: 'Disapproved' },
-    { value: 'pending', label: 'Registered' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'registered', label: 'Registered' },
     { value: 'not_registered', label: 'Not Registered' },
     { value: 'graduated', label: 'Graduated' }
   ];
@@ -135,8 +137,12 @@ export class Students implements OnInit, OnDestroy {
         } else if (this.selectedApprovalStatus === 'not_registered') {
           matchesApproval = s.graduationStatus === 'active' && 
                            s.registrationStatus === 'not_registered';
+        } else if (this.selectedApprovalStatus === 'registered') {
+          // Show all registered students regardless of approval status
+          matchesApproval = s.graduationStatus === 'active' && 
+                           s.registrationStatus === 'registered';
         } else {
-          // For approved, disapproved, pending - only show registered students with that status
+          // For approved, disapproved, pending - only show registered students with that specific status
           matchesApproval = s.graduationStatus === 'active' && 
                            s.registrationStatus === 'registered' &&
                            s.approval_status === this.selectedApprovalStatus;
@@ -194,7 +200,8 @@ export class Students implements OnInit, OnDestroy {
     
     this.selectedStudentForApproval = student;
     this.pendingApprovalAction = 'approved';
-    this.generateApprovalContent(student, 'approved');
+    this.showApprovalDialog = true;
+    document.body.classList.add('dialog-open');
   }
 
   disapproveStudent(student: Student, event?: Event) {
@@ -210,41 +217,79 @@ export class Students implements OnInit, OnDestroy {
     
     this.selectedStudentForApproval = student;
     this.pendingApprovalAction = 'disapproved';
-    this.generateApprovalContent(student, 'disapproved');
+    this.showApprovalDialog = true;
+    document.body.classList.add('dialog-open');
   }
 
   generateApprovalContent(student: Student, newStatus: 'approved' | 'disapproved') {
     this.isGeneratingContent = true;
     this.generatedContent = '';
     
-    // Check if database is available, use API service first
-    if (!this.isUsingMockData) {
-      const approvalRequest: ApprovalRequest = {
-        studentId: student.studentId,
-        currentStatus: student.approval_status,
-        newStatus: newStatus
-      };
+    if (this.useAIContent) {
+      // Use AI-generated content
+      if (!this.isUsingMockData) {
+        const approvalRequest: ApprovalRequest = {
+          studentId: student.studentId,
+          currentStatus: student.approval_status,
+          newStatus: newStatus
+        };
 
-      this.apiService.generateApprovalContent(approvalRequest).subscribe({
-        next: (response) => {
-          this.isGeneratingContent = false;
-          if (response.success && response.generatedContent) {
-            this.generatedContent = response.generatedContent;
-            this.showApprovalDialog = true;
-            document.body.classList.add('dialog-open');
-          } else {
-            alert('Failed to generate approval content');
+        this.apiService.generateApprovalContent(approvalRequest).subscribe({
+          next: (response) => {
+            this.isGeneratingContent = false;
+            if (response.success && response.generatedContent) {
+              this.generatedContent = response.generatedContent;
+              this.showApprovalDialog = true;
+              document.body.classList.add('dialog-open');
+            } else {
+              alert('Failed to generate approval content');
+            }
+          },
+          error: (error) => {
+            console.warn('Database ML generation failed, falling back to hardcoded content:', error);
+            this.generateHardcodedContentFallback(student, newStatus);
           }
-        },
-        error: (error) => {
-          console.warn('Database ML generation failed, falling back to hardcoded content:', error);
-          this.generateHardcodedContentFallback(student, newStatus);
-        }
-      });
+        });
+      } else {
+        // Use hardcoded AI content as fallback
+        this.generateHardcodedContentFallback(student, newStatus);
+      }
     } else {
-      // Use hardcoded content as fallback
-      this.generateHardcodedContentFallback(student, newStatus);
+      // Use generic content
+      this.generateGenericContent(student, newStatus);
     }
+  }
+
+  private generateGenericContent(student: Student, newStatus: 'approved' | 'disapproved') {
+    setTimeout(() => {
+      if (newStatus === 'approved') {
+        this.generatedContent = `Dear ${student.name},
+
+Your registration for ${student.nextSemesterRegistration} has been approved by your advisor.
+
+You may now proceed with the registration process within the specified deadline.
+
+Best regards,
+Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+      } else {
+        this.generatedContent = `Dear ${student.name},
+
+Your registration for ${student.nextSemesterRegistration} has been disapproved by your advisor.
+
+Please contact your advisor to discuss the requirements for approval.
+
+Best regards,
+Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+      }
+      
+      this.isGeneratingContent = false;
+      this.showApprovalDialog = true;
+      document.body.classList.add('dialog-open');
+    }, 800); // Shorter delay for generic content
   }
 
   private generateHardcodedContentFallback(student: Student, newStatus: 'approved' | 'disapproved') {
@@ -265,7 +310,7 @@ export class Students implements OnInit, OnDestroy {
       .sort((a, b) => b.termId.localeCompare(a.termId))[0];
 
     if (newStatus === 'approved') {
-      if (latestTerm && latestTerm.gpa >= 3.5) {
+      if (latestTerm && latestTerm.gpa >= 3.7) {
         return `Dear ${student.name},
 
 Based on your excellent academic performance in ${latestTerm.termId} with a GPA of ${latestTerm.gpa}, I am pleased to approve your registration for the next semester.
@@ -350,8 +395,9 @@ CUET`;
         next: (response) => {
           this.isSendingEmail = false;
           if (response.success) {
-            // Update local student status
+            // Update student status through the service to ensure database sync
             this.selectedStudentForApproval!.approval_status = newStatus;
+            this.studentService.updateStudent(this.selectedStudentForApproval!);
             this.updateComputedValues();
             this.closeApprovalDialog();
             alert(`Approval email sent successfully to ${this.selectedStudentForApproval!.email}!`);
@@ -376,8 +422,9 @@ CUET`;
     if (!student) return;
 
     setTimeout(() => {
-      // Update local student status
+      // Update student status through the service to ensure consistency
       student.approval_status = newStatus;
+      this.studentService.updateStudent(student);
       
       // Update the cached filtered students to reflect the change
       this.updateComputedValues();
@@ -400,6 +447,7 @@ CUET`;
     this.isGeneratingContent = false;
     this.isSendingEmail = false;
     this.pendingApprovalAction = null;
+    this.useAIContent = true; // Reset to AI content by default
     
     // Re-enable body scroll
     document.body.classList.remove('dialog-open');
@@ -407,18 +455,144 @@ CUET`;
 
   // ---- APPROVE ALL FUNCTIONALITY ----
   approveAll() {
-    const pendingStudentIds = this._filteredStudents
+    const pendingStudents = this._filteredStudents
       .filter(s => s.graduationStatus === 'active' && 
                    s.registrationStatus === 'registered' && 
-                   s.approval_status === 'pending')
-      .map(s => s.studentId);
+                   s.approval_status === 'pending');
     
-    if (pendingStudentIds.length === 0) {
+    if (pendingStudents.length === 0) {
       alert('No registered students pending approval found.');
       return;
     }
-    
-    this.studentService.approveAllStudents(pendingStudentIds);
+
+    const confirmMessage = `This will approve ${pendingStudents.length} students and send generic approval emails to each of them. Continue?`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Send generic emails to all students
+    this.sendBulkApprovalEmails(pendingStudents);
+  }
+
+  private sendBulkApprovalEmails(students: Student[]) {
+    const totalCount = students.length;
+    const studentIds = students.map(s => s.studentId);
+
+    // Show progress
+    alert(`Sending approval emails to ${totalCount} students...`);
+
+    // Use API service for bulk approval with database-first approach
+    if (!this.isUsingMockData) {
+      // Try database first
+      this.apiService.approveMultipleStudents(studentIds).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Send individual emails for each student
+            this.sendIndividualBulkEmails(students);
+          } else {
+            alert('Failed to approve students in database');
+          }
+        },
+        error: (error) => {
+          console.warn('Database bulk approval failed, using simulation:', error);
+          this.simulateBulkApproval(students);
+        }
+      });
+    } else {
+      // Use mock data simulation
+      this.simulateBulkApproval(students);
+    }
+  }
+
+  private sendIndividualBulkEmails(students: Student[]) {
+    const totalCount = students.length;
+    let completedCount = 0;
+
+    students.forEach((student, index) => {
+      const genericContent = `Dear ${student.name},
+
+Your registration for ${student.nextSemesterRegistration} has been approved by your advisor.
+
+You may now proceed with the registration process within the specified deadline.
+
+Best regards,
+Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+
+      // Send email via API service
+      setTimeout(() => {
+        this.apiService.sendApprovalEmail(student.studentId, genericContent, 'approved').subscribe({
+          next: (response) => {
+            if (response.success) {
+              // Update local student status (will be refreshed at the end)
+              student.approval_status = 'approved';
+            }
+            
+            // Log the email
+            console.log(`Bulk Email ${index + 1}/${totalCount} sent to ${student.email}:`);
+            console.log(`Subject: Registration Approved - ${student.nextSemesterRegistration}`);
+            
+            completedCount++;
+            
+            // Update UI when all emails are sent
+            if (completedCount === totalCount) {
+              // Refresh all student data to ensure dashboard gets updated
+              this.studentService.refreshStudents();
+              alert(`Successfully sent approval emails to ${totalCount} students!`);
+            }
+          },
+          error: (error) => {
+            console.error(`Failed to send email to ${student.email}:`, error);
+            completedCount++;
+            
+            if (completedCount === totalCount) {
+              // Refresh all student data to ensure dashboard gets updated
+              this.studentService.refreshStudents();
+              alert(`Completed bulk approval process. Some emails may have failed.`);
+            }
+          }
+        });
+      }, (index + 1) * 500); // Stagger emails by 500ms each
+    });
+  }
+
+  private simulateBulkApproval(students: Student[]) {
+    const totalCount = students.length;
+    let completedCount = 0;
+
+    students.forEach((student, index) => {
+      const genericContent = `Dear ${student.name},
+
+Your registration for ${student.nextSemesterRegistration} has been approved by your advisor.
+
+You may now proceed with the registration process within the specified deadline.
+
+Best regards,
+Academic Advisor
+Computer Science & Engineering Department
+CUET`;
+
+      // Simulate email sending with staggered delays
+      setTimeout(() => {
+        // Update student status (will be refreshed at the end)
+        student.approval_status = 'approved';
+        
+        // Log the email
+        console.log(`Bulk Email ${index + 1}/${totalCount} sent to ${student.email}:`);
+        console.log(`Subject: Registration Approved - ${student.nextSemesterRegistration}`);
+        console.log(`Content: ${genericContent}`);
+        
+        completedCount++;
+        
+        // Update UI when all emails are sent
+        if (completedCount === totalCount) {
+          // Refresh all student data to ensure dashboard gets updated
+          this.studentService.refreshStudents();
+          alert(`Successfully sent approval emails to ${totalCount} students!`);
+        }
+      }, (index + 1) * 500); // Stagger emails by 500ms each
+    });
   }
 
   getApprovalStatus(student: Student): string {
@@ -439,7 +613,7 @@ CUET`;
   clearFilters() {
     this.searchId = '';
     this.selectedBatch = '';
-    this.selectedApprovalStatus = 'pending'; // Reset to default pending filter
+    this.selectedApprovalStatus = 'registered'; // Reset to default registered filter
     this.page = 1;
     this.updateComputedValues();
   }
