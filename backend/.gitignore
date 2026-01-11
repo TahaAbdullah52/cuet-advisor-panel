@@ -1,0 +1,6 @@
+# Environment variables
+*.env
+
+# Documentation (generated)
+BACKEND_REFERENCE.md
+PROJECT_STRUCTURE.md
