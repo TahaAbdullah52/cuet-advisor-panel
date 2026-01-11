@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Student from '../models/Student.model';
 import { AuthRequest } from '../types/auth.types';
+import { generateApprovalEmail } from '../services/gemini.service';
 
 /**
  * Get all students for logged-in advisor
@@ -219,6 +220,95 @@ export const approveMultiple = async (req: Request, res: Response): Promise<void
     res.status(500).json({
       status: 'error',
       message: 'Failed to approve students',
+      error: error.message
+    });
+  }
+};
+/**
+ * Generate approval/disapproval email content using Gemini AI
+ * POST /api/students/generate-approval
+ */
+export const generateApprovalContent = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const advisorId = (req as unknown as AuthRequest).advisor?.id;
+    const { studentId, newStatus } = req.body;
+
+    if (!advisorId) {
+      res.status(401).json({
+        status: 'error',
+        message: 'Unauthorized'
+      });
+      return;
+    }
+
+    // Validate newStatus
+    if (!newStatus || !['approved', 'rejected'].includes(newStatus)) {
+      res.status(400).json({
+        status: 'error',
+        message: 'newStatus must be either "approved" or "rejected"'
+      });
+      return;
+    }
+
+    // Find student with security check
+    const student = await Student.findOne({
+      student_id: studentId,
+      advisor_id: advisorId
+    });
+
+    if (!student) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Student not found'
+      });
+      return;
+    }
+
+    // Get latest term with results
+    // Find the last term that has courses (results published)
+    const terms = ['L4T2', 'L4T1', 'L3T2', 'L3T1', 'L2T2', 'L2T1', 'L1T2', 'L1T1'];
+    let latestTerm: string | null = null;
+    let latestGPA: number | null = null;
+
+    for (const termKey of terms) {
+      const term = (student as any)[termKey];
+      if (term && term.courses && term.courses.length > 0) {
+        latestTerm = termKey;
+        latestGPA = term.term_gpa || 0;
+        break;
+      }
+    }
+
+    if (!latestTerm) {
+      res.status(400).json({
+        status: 'error',
+        message: 'No published term results found for this student'
+      });
+      return;
+    }
+
+    // Generate email content using Gemini
+    const generatedContent = await generateApprovalEmail(
+      student.name,
+      latestTerm,
+      latestGPA || 0,
+      student.cgpa || 0,
+      newStatus as 'approved' | 'rejected'
+    );
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        generatedContent
+      },
+      message: 'Content generated successfully'
+    });
+
+  } catch (error: any) {
+    console.error('Generate approval content error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to generate content',
       error: error.message
     });
   }

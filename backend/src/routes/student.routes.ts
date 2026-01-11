@@ -3,7 +3,8 @@ import {
   getStudents,
   getStudentById,
   updateStudent,
-  approveMultiple
+  approveMultiple,
+  generateApprovalContent
 } from '../controllers/student.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 
@@ -17,5 +18,6 @@ router.get('/', getStudents);
 router.get('/:id', getStudentById);
 router.put('/:id', updateStudent);
 router.post('/approve-multiple', approveMultiple);
+router.post('/generate-approval', generateApprovalContent);
 
 export default router;
