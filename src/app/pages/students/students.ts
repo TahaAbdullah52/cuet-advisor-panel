@@ -54,7 +54,7 @@ export class Students implements OnInit, OnDestroy {
     { value: '', label: 'All Status' },
     { value: 'approved', label: 'Approved' },
     { value: 'disapproved', label: 'Disapproved' },
-    { value: 'pending', label: 'Pending' },
+    { value: 'pending', label: 'Registered' },
     { value: 'not_registered', label: 'Not Registered' },
     { value: 'graduated', label: 'Graduated' }
   ];
@@ -371,21 +371,25 @@ CUET`;
   }
 
   private simulateEmailSending(newStatus: 'approved' | 'disapproved') {
+    // Store reference before timeout to avoid null reference
+    const student = this.selectedStudentForApproval;
+    if (!student) return;
+
     setTimeout(() => {
       // Update local student status
-      this.selectedStudentForApproval!.approval_status = newStatus;
+      student.approval_status = newStatus;
       
       // Update the cached filtered students to reflect the change
       this.updateComputedValues();
       
       // Log the email (simulating Gmail send)
-      console.log(`Email Sent to ${this.selectedStudentForApproval!.email}:`);
-      console.log(`Subject: Registration ${newStatus === 'approved' ? 'Approved' : 'Disapproved'} - ${this.selectedStudentForApproval!.nextSemesterRegistration}`);
+      console.log(`Email Sent to ${student.email}:`);
+      console.log(`Subject: Registration ${newStatus === 'approved' ? 'Approved' : 'Disapproved'} - ${student.nextSemesterRegistration}`);
       console.log(`Content: ${this.generatedContent}`);
       
       this.isSendingEmail = false;
       this.closeApprovalDialog();
-      alert(`Approval email sent successfully to ${this.selectedStudentForApproval!.email}!`);
+      alert(`Approval email sent successfully to ${student.email}!`);
     }, 2000); // Simulate email sending time
   }
 
@@ -406,7 +410,7 @@ CUET`;
     const pendingStudentIds = this._filteredStudents
       .filter(s => s.graduationStatus === 'active' && 
                    s.registrationStatus === 'registered' && 
-                   s.approval_status === 'disapproved')
+                   s.approval_status === 'pending')
       .map(s => s.studentId);
     
     if (pendingStudentIds.length === 0) {

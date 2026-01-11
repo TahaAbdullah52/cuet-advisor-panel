@@ -61,7 +61,7 @@
       <!-- Filter by Approval Status -->
       <div>
         <label class="block text-sm font-medium academic-text mb-2">
-          Approval Status
+          Registration and Approval Status
         </label>
         <select
           class="academic-select"
@@ -182,18 +182,18 @@
             <!-- Approval Status -->
             <td>
               <span *ngIf="getApprovalStatus(s) === 'Approved'" class="status-approved">
-                ✓ Approved
+                 Approved
               </span>
               <span *ngIf="getApprovalStatus(s) === 'Pending'" class="status-pending">
-                ⏳ Pending
+                 Pending
               </span>
               <span *ngIf="getApprovalStatus(s) === 'Disapproved'" class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-medium">
-                ✗ Disapproved
+                 Disapproved
               </span>
-              <span *ngIf="getApprovalStatus(s) === 'Not Registered'" class="px-2 py-1 bg-yellow-100 text-yellow-600 rounded text-xs font-medium">
+              <span *ngIf="getApprovalStatus(s) === 'Not Registered'" class="px-2 py-1 bg-red-100 text-red-600 rounded text-xs font-medium">
                 Not Registered
               </span>
-              <span *ngIf="getApprovalStatus(s) === 'Graduated'" class="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs font-medium">
+              <span *ngIf="getApprovalStatus(s) === 'Graduated'" class="px-2 py-1 bg-green-100 text-green-600 rounded text-xs font-medium">
                 Graduated
               </span>
             </td>
@@ -209,23 +209,23 @@
                   <!-- Approve Button -->
                   <button
                     (click)="approveStudent(s, $event)"
-                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
+                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200 "
                     [class.btn-success]="s.approval_status !== 'approved'"
                     [class.bg-green-200]="s.approval_status === 'approved'"
                     [class.text-green-800]="s.approval_status === 'approved'"
                     [class.font-bold]="s.approval_status === 'approved'">
-                    {{ s.approval_status === 'approved' ? '✓ Approved' : 'Approve' }}
+                    {{ s.approval_status === 'approved' ? ' Approved' : 'Approve' }}
                   </button>
 
                   <!-- Disapprove Button -->
                   <button
                     (click)="disapproveStudent(s, $event)"
-                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200"
+                    class="text-xs px-3 py-1 rounded font-medium transition-all duration-200 ml-5"
                     [class.btn-danger]="s.approval_status !== 'disapproved'"
                     [class.bg-red-200]="s.approval_status === 'disapproved'"
                     [class.text-red-800]="s.approval_status === 'disapproved'"
                     [class.font-bold]="s.approval_status === 'disapproved'">
-                    {{ s.approval_status === 'disapproved' ? '✗ Disapproved' : 'Disapprove' }}
+                    {{ s.approval_status === 'disapproved' ? ' Disapproved' : 'Disapprove' }}
                   </button>
                 </div>
 

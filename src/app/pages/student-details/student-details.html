@@ -1,5 +1,5 @@
 <!-- Academic Student Details -->
-<div class="space-y-6" *ngIf="student">
+<div class="space-y-6" *ngIf="student; else loadingState">
 
   <!-- Header with Back Button -->
   <div class="flex items-center space-x-4 mt-5">
@@ -119,7 +119,7 @@
   </div>
 
   <!-- Term Details & Approval -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" *ngIf="selectedTerm">
     
     <!-- Term Summary -->
     <div class="academic-card p-6">
@@ -163,12 +163,14 @@
       <div class="flex items-center justify-between p-4 rounded-lg"
            [class.bg-green-50]="student.approval_status === 'approved'"
            [class.bg-red-50]="student.approval_status === 'disapproved'"
+           [class.bg-yellow-50]="student.approval_status === 'pending'"
            [class.bg-gray-50]="student.graduationStatus === 'graduated'">
         
         <div class="flex items-center space-x-3">
           <div class="w-10 h-10 rounded-full flex items-center justify-center"
                [class.bg-green-100]="student.approval_status === 'approved'"
                [class.bg-red-100]="student.approval_status === 'disapproved'"
+               [class.bg-yellow-100]="student.approval_status === 'pending'"
                [class.bg-gray-100]="student.graduationStatus === 'graduated'">
             
             <!-- Approved Icon -->
@@ -183,6 +185,12 @@
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
             </svg>
             
+            <!-- Pending Icon -->
+            <svg *ngIf="student.approval_status === 'pending' && student.graduationStatus === 'active'" 
+                 class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            
             <!-- Graduated Icon -->
             <svg *ngIf="student.graduationStatus === 'graduated'" 
                  class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -194,6 +202,7 @@
             <p class="font-semibold"
                [class.text-green-700]="student.approval_status === 'approved' && student.graduationStatus === 'active'"
                [class.text-red-700]="student.approval_status === 'disapproved' && student.graduationStatus === 'active'"
+               [class.text-yellow-700]="student.approval_status === 'pending' && student.graduationStatus === 'active'"
                [class.text-gray-700]="student.graduationStatus === 'graduated'">
               
               <span *ngIf="student.graduationStatus === 'graduated'">Graduated</span>
@@ -202,6 +211,9 @@
               </span>
               <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'disapproved'">
                 Disapproved for {{ student.nextSemesterRegistration }}
+              </span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'pending'">
+                Pending Approval for {{ student.nextSemesterRegistration }}
               </span>
             </p>
             
@@ -213,7 +225,10 @@
                 Student can register for next semester
               </span>
               <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'disapproved'">
-                Approval required for next semester registration
+                Registration has been disapproved by advisor
+              </span>
+              <span *ngIf="student.graduationStatus === 'active' && student.approval_status === 'pending'">
+                Awaiting advisor approval for next semester registration
               </span>
             </p>
           </div>
@@ -224,7 +239,7 @@
   </div>
 
   <!-- Course Details Table -->
-  <div class="academic-card">
+  <div class="academic-card" *ngIf="selectedTerm">
     <div class="academic-card-header">
       <h2 class="text-lg font-semibold academic-title">
         {{ selectedTerm.termId }} - Course Details
@@ -294,6 +309,17 @@
 </div>
 
 <!-- Loading/Error State -->
+<ng-template #loadingState>
+  <div class="flex items-center justify-center min-h-96">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p class="text-lg font-medium academic-text">Loading student details...</p>
+      <p class="text-sm academic-muted">Please wait while we fetch the student information</p>
+    </div>
+  </div>
+</ng-template>
+
+<!-- Student Not Found State -->
 <div *ngIf="!student" class="flex items-center justify-center min-h-96">
   <div class="text-center">
     <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
