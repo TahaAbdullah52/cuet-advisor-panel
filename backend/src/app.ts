@@ -1,6 +1,8 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import authRoutes from './routes/auth.routes';
+import studentRoutes from './routes/student.routes';
 
 // Load environment variables
 dotenv.config();
@@ -21,9 +23,9 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// Routes will be added here
-// app.use('/api/auth', authRoutes);
-// app.use('/api/students', studentRoutes);
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/students', studentRoutes);
 // etc.
 
 // 404 handler
