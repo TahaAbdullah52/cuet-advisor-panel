@@ -1,9 +1,15 @@
-export interface Course {
-  courseCode: string;
-  courseCredit: number;
-  sessional: boolean;
-  result: string;
-  courseType: string;
+export interface Student {
+  studentId: string;
+  name: string;
+  email: string; // Added email field
+  batch: string;
+  terms: Term[];
+  overallCgpa: number;
+  nextSemesterRegistration?: string; // Next semester they're trying to register for
+  registrationStatus: 'registered' | 'not_registered'; // Registration status for current semester
+  approval_status: 'approved' | 'disapproved' | 'pending'; // Overall approval status for next semester registration
+  graduationStatus: 'graduated' | 'active'; // Graduation status
+  thesisInfo?: ThesisInfo; // Thesis information
 }
 
 export interface Term {
@@ -22,18 +28,12 @@ export interface ThesisInfo {
   meetingDateTime?: string;
 }
 
-export interface Student {
-  studentId: string;
-  name: string;
-  email: string; // Added email field
-  batch: string;
-  terms: Term[];
-  overallCgpa: number;
-  nextSemesterRegistration?: string; // Next semester they're trying to register for
-  registrationStatus: 'registered' | 'not_registered'; // Registration status for current semester
-  approval_status: 'approved' | 'disapproved' | 'pending'; // Overall approval status for next semester registration
-  graduationStatus: 'graduated' | 'active'; // Graduation status
-  thesisInfo?: ThesisInfo; // Thesis information
+export interface Course {
+  courseCode: string;
+  courseCredit: number;
+  sessional: boolean;
+  result: string;
+  courseType: string;
 }
 
 export interface ApprovalRequest {

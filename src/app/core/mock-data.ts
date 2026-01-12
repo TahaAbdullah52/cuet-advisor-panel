@@ -247,13 +247,13 @@ function getApprovalStatus(batch: string, studentIndex: number, registrationStat
   if (batchNum === 19) return 'approved';
   
   // Only registered students can have approval status
-  if (registrationStatus === 'not_registered') {
-    return 'pending'; // Unregistered students are pending (no approval decision yet)
-  }
+  if (registrationStatus === 'not_registered') return 'pending';
   
-  // For registered students: mix of approved and disapproved
-  // 60% approved, 40% disapproved
-  return studentIndex % 5 < 3 ? 'approved' : 'disapproved';
+  // For registered students, create a mix of statuses for testing
+  // This creates a realistic distribution: some approved, some pending, some disapproved
+  if (studentIndex % 4 === 0) return 'approved';    // 25% approved
+  if (studentIndex % 4 === 1) return 'disapproved'; // 25% disapproved  
+  return 'pending';                                  // 50% pending
 }
 
 // Helper function to get graduation status

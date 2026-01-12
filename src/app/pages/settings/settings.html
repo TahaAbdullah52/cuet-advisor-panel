@@ -2,7 +2,7 @@
 <div class="space-y-6">
 
   <!-- Header -->
-  <div class="academic-card p-6">
+  <div class="academic-card p-6 mt-5">
     <div class="flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold academic-title mb-2">
@@ -12,23 +12,12 @@
           Manage your advisor account preferences and security
         </p>
       </div>
-      
-      <!-- Data Source Indicator -->
-      <div class="flex items-center space-x-2">
-        <div class="w-2 h-2 rounded-full" 
-             [class.bg-green-500]="!isUsingMockData"
-             [class.bg-yellow-500]="isUsingMockData"></div>
-        <span class="text-xs academic-muted">
-          {{ isUsingMockData ? 'Using Mock Authentication' : 'Connected to Database' }}
-        </span>
-      </div>
-    </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     <!-- Profile Information -->
-    <div class="lg:col-span-4 academic-card">
+    <div class="lg:col-span-4 academic-card mt-5">
       <div class="academic-card-header">
         <h2 class="text-lg font-semibold academic-title">
           Profile Information

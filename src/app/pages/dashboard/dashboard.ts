@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 
-import { getBatchWiseStats } from '../../core/mock-data';
 import { Student } from '../../core/models';
 import { StudentService } from '../../core/student.service';
 
@@ -102,21 +101,32 @@ export class Dashboard implements OnInit, OnDestroy {
 
   private updateBatchData() {
     // Calculate batch statistics from actual student data (database or mock)
-    const batchMap = new Map<string, { students: Student[], totalCgpa: number, approvedCount: number }>();
+    const batchMap = new Map<string, { students: Student[], totalCgpa: number, approvedCount: number, pendingCount: number }>();
     
     this.students.forEach(student => {
       if (!batchMap.has(student.batch)) {
-        batchMap.set(student.batch, { students: [], totalCgpa: 0, approvedCount: 0 });
+        batchMap.set(student.batch, { students: [], totalCgpa: 0, approvedCount: 0, pendingCount: 0 });
       }
       
       const batchData = batchMap.get(student.batch)!;
       batchData.students.push(student);
       batchData.totalCgpa += student.overallCgpa;
       
-      // Count approved students (only active students, using approval_status field)
-      if (student.graduationStatus === 'active' && student.approval_status === 'approved') {
+      // Handle approval counts based on graduation status
+      if (student.graduationStatus === 'graduated') {
+        // Graduated students are automatically considered approved, no pending
         batchData.approvedCount++;
+        // pendingCount remains 0 for graduated students
+      } else if (student.graduationStatus === 'active' && student.registrationStatus === 'registered') {
+        // Only active registered students can have approval status
+        if (student.approval_status === 'approved') {
+          batchData.approvedCount++;
+        } else if (student.approval_status === 'pending') {
+          batchData.pendingCount++;
+        }
+        // Note: disapproved students are not counted in either approved or pending
       }
+      // Note: active but not registered students are not counted in approval statistics
     });
 
     // Convert to array and sort by batch
@@ -125,7 +135,8 @@ export class Dashboard implements OnInit, OnDestroy {
         batch,
         totalStudents: data.students.length,
         averageGpa: data.students.length > 0 ? +(data.totalCgpa / data.students.length).toFixed(2) : 0,
-        approvedCount: data.approvedCount
+        approvedCount: data.approvedCount,
+        pendingCount: data.pendingCount
       }))
       .sort((a, b) => a.batch.localeCompare(b.batch));
 
@@ -135,7 +146,10 @@ export class Dashboard implements OnInit, OnDestroy {
     console.log('Batch Data Updated from Student Data:', {
       batchLabels: this.batchLabels,
       batchGpaValues: this.batchGpaValues,
-      batchStats: this.batchStats
+      batchStats: this.batchStats,
+      totalStudentsInBatches: this.batchStats.reduce((sum, b) => sum + b.totalStudents, 0),
+      totalApprovedInBatches: this.batchStats.reduce((sum, b) => sum + b.approvedCount, 0),
+      totalPendingInBatches: this.batchStats.reduce((sum, b) => sum + b.pendingCount, 0)
     });
   }
 }

@@ -13,6 +13,8 @@
         </p>
       </div>
       <div class="flex items-center space-x-4">
+    
+        
         <button 
           (click)="toggleAddForm()"
           class="btn-primary flex items-center space-x-2">
@@ -164,8 +166,33 @@
     </form>
   </div>
 
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex items-center justify-center py-12">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p class="text-lg font-medium academic-text">Loading routines...</p>
+      <p class="text-sm academic-muted">Please wait while we fetch your schedule</p>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && allRoutines.length === 0" class="flex items-center justify-center py-12">
+    <div class="text-center">
+      <svg class="w-16 h-16 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+      </svg>
+      <p class="text-lg font-medium academic-text">No routines found</p>
+      <p class="text-sm academic-muted mb-4">Start by adding your first class or lab schedule</p>
+      <button 
+        (click)="toggleAddForm()"
+        class="btn-primary">
+        Add Your First Routine
+      </button>
+    </div>
+  </div>
+
   <!-- Today's Schedule -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <div *ngIf="!isLoading && allRoutines.length > 0" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     
     <!-- Current Class/Lab -->
     <div class="academic-card p-6" *ngIf="todaySchedule.current">

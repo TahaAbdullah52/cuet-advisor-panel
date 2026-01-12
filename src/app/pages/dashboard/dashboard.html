@@ -23,7 +23,7 @@
             <svg class="w-3 h-3" [class.animate-spin]="isLoading" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
             </svg>
-            <span>{{ isLoading ? 'Loading...' : 'Refresh' }}</span>
+            <span>{{ isLoading ? 'Refreshing...' : 'Refresh Data' }}</span>
           </button>
         </div>
       </div>
@@ -152,12 +152,18 @@
             <th>Average CGPA</th>
             <th>Approved</th>
             <th>Pending</th>
-            <th>Approval Rate</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let batch of batchStats">
-            <td class="font-semibold">{{ batch.batch }}</td>
+          <tr *ngFor="let batch of batchStats" 
+              [class.bg-green-25]="batch.batch === '19'"
+              [class.opacity-75]="batch.batch === '19'">
+            <td class="font-semibold">
+              {{ batch.batch }}
+              <span *ngIf="batch.batch === '19'" class="ml-2 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                Graduated
+              </span>
+            </td>
             <td>{{ batch.totalStudents }}</td>
             <td>
               <span class="font-medium text-slate-700">
@@ -165,14 +171,16 @@
               </span>
             </td>
             <td>
-              <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">{{ batch.approvedCount }}</span>
+              <span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium">
+                {{ batch.approvedCount }}
+              </span>
             </td>
             <td>
-              <span class="px-2 py-1 bg-slate-100 text-slate-700 rounded text-xs font-medium">{{ batch.totalStudents - batch.approvedCount }}</span>
-            </td>
-            <td>
-              <span class="font-medium text-slate-700">
-                {{ ((batch.approvedCount / batch.totalStudents) * 100).toFixed(1) }}%
+              <span *ngIf="batch.pendingCount > 0" class="px-2 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-medium">
+                {{ batch.pendingCount }}
+              </span>
+              <span *ngIf="batch.pendingCount === 0" class="px-2 py-1 bg-gray-100 text-gray-500 rounded text-xs font-medium">
+                0
               </span>
             </td>
           </tr>

@@ -36,28 +36,40 @@ export class StudentDetails implements OnInit, OnDestroy {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
+      // First, ensure students are loaded
+      if (this.studentService.getTotalStudents() === 0) {
+        this.studentService.refreshStudents();
+      }
+
       // Subscribe to student updates from service
       this.subscription.add(
         this.studentService.students$.subscribe(students => {
+          console.log('Student details: received students', students.length);
           const found = students.find(s => s.studentId === id);
           if (found) {
+            console.log('Student details: found student', found.name);
             this.student = found;
-            this.selectedTerm = this.student.terms[0];
-            this.prepareChart();
+            if (this.student.terms && this.student.terms.length > 0) {
+              this.selectedTerm = this.student.terms[0];
+              this.prepareChart();
+            }
+          } else if (students.length > 0) {
+            console.log('Student details: student not found, redirecting');
+            this.router.navigate(['/students']);
           }
         })
       );
 
-      // Also try to get individual student data
+      // Also try to get individual student data as fallback
       this.subscription.add(
         this.studentService.getStudent(id).subscribe(student => {
           if (student) {
+            console.log('Student details: got individual student', student.name);
             this.student = student;
-            this.selectedTerm = this.student.terms[0];
-            this.prepareChart();
-          } else {
-            // Redirect to students page if student not found
-            this.router.navigate(['/students']);
+            if (this.student.terms && this.student.terms.length > 0) {
+              this.selectedTerm = this.student.terms[0];
+              this.prepareChart();
+            }
           }
         })
       );

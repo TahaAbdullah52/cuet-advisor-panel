@@ -8,7 +8,6 @@ import { filter, map } from 'rxjs/operators';
   standalone: true,
   imports: [CommonModule],
   templateUrl: './navbar.html',
-  styleUrl: './navbar.css',
 })
 export class Navbar {
   currentPageTitle = 'Dashboard';
