@@ -16,11 +16,12 @@ export const generateApprovalEmailWithOllama = async (
   latestTerm: string,
   latestGPA: number,
   overallCGPA: number,
-  decision: 'approved' | 'rejected'
+  decision: 'approved' | 'rejected',
+  advisorName: string = 'Dr. Academic Advisor'
 ): Promise<string> => {
   try {
     const prompt = decision === 'approved'
-      ? `Write a brief professional approval email (80-100 words) from Dr. Academic Advisor, CSE Department, CUET to ${studentName}.
+      ? `Write a brief professional approval email (80-100 words) from ${advisorName}, CSE Department, CUET to ${studentName}.
 
 Content to include:
 - Approve registration for next semester
@@ -32,11 +33,11 @@ Format:
 Dear ${studentName},
 [Body of approval message]
 Best regards,
-Dr. Academic Advisor
+${advisorName}
 CSE Department, CUET
 
 Write only the email, no additional commentary.`
-      : `Write a brief professional email (80-100 words) from Dr. Academic Advisor, CSE Department, CUET to ${studentName}.
+      : `Write a brief professional email (80-100 words) from ${advisorName}, CSE Department, CUET to ${studentName}.
 
 Content to include:
 - Registration needs review/discussion
@@ -48,7 +49,7 @@ Format:
 Dear ${studentName},
 [Body with constructive feedback]
 Best regards,
-Dr. Academic Advisor
+${advisorName}
 CSE Department, CUET
 
 Write only the email, no additional commentary.`;
@@ -60,6 +61,8 @@ Write only the email, no additional commentary.`;
       options: {
         temperature: 0.7,
         top_p: 0.9,
+        num_predict: 500, // Maximum tokens to generate (prevents truncation)
+        stop: ["---", "Note:", "P.S."], // Stop sequences to prevent extra content
       }
     }, {
       timeout: 60000
@@ -67,11 +70,28 @@ Write only the email, no additional commentary.`;
 
     const data = response.data as OllamaResponse;
     
+    console.log('📝 Ollama response metadata:', {
+      model: data.model,
+      done: data.done,
+      responseLength: data.response?.length || 0,
+      created_at: data.created_at
+    });
+    
     if (!data.response || data.response.trim().length === 0) {
       throw new Error('Empty response from Ollama');
     }
+    
+    const trimmedResponse = data.response.trim();
+    console.log('📧 Generated email preview (first 100 chars):', trimmedResponse.substring(0, 100));
+    console.log('📧 Generated email preview (last 100 chars):', trimmedResponse.substring(trimmedResponse.length - 100));
+    
+    // Check if response seems complete (should end with signature)
+    const endsWithSignature = /Best regards|Sincerely|Regards/i.test(trimmedResponse.slice(-200));
+    if (!endsWithSignature) {
+      console.warn('⚠️ Email might be truncated - no signature found at end');
+    }
 
-    return data.response.trim();
+    return trimmedResponse;
 
   } catch (error: any) {
     console.error('Ollama API error:', error);

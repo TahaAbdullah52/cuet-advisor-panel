@@ -44,12 +44,33 @@ export class Students implements OnInit, OnDestroy {
   pendingApprovalAction: 'approved' | 'disapproved' | null = null;
   useAIContent = true; // Toggle between AI and generic content
 
+  // ---- BATCH SELECTION ----
+  selectedStudents: Set<string> = new Set(); // Set of student IDs
+  isBatchProcessing = false;
+  batchStudents: Student[] = [];
+  currentBatchIndex = 0;
+  useGenericForAll = false; // Flag to use generic template for entire batch
+
   // ---- CACHED COMPUTED VALUES ----
   private _filteredStudents: Student[] = [];
   private _batches: string[] = [];
   private _pendingStudentsCount = 0;
   private _totalPages = 0;
   private _paginatedStudents: Student[] = [];
+
+  // Get advisor name from localStorage
+  private getAdvisorName(): string {
+    try {
+      const advisorData = localStorage.getItem('advisor');
+      if (advisorData) {
+        const advisor = JSON.parse(advisorData);
+        return advisor.name || 'Dr. Academic Advisor';
+      }
+    } catch (e) {
+      console.error('Error getting advisor name:', e);
+    }
+    return 'Dr. Academic Advisor';
+  }
 
   readonly approvalStatusOptions = [
     { value: '', label: 'All Status' },
@@ -192,6 +213,72 @@ export class Students implements OnInit, OnDestroy {
     this.updateComputedValues();
   }
 
+  // ---- BATCH SELECTION METHODS ----
+  toggleSelection(studentId: string, event?: Event) {
+    if (event) {
+      event.stopPropagation(); // Prevent row click
+    }
+    
+    this.ngZone.run(() => {
+      if (this.selectedStudents.has(studentId)) {
+        this.selectedStudents.delete(studentId);
+      } else {
+        this.selectedStudents.add(studentId);
+      }
+      this.cdr.detectChanges();
+    });
+  }
+
+  isSelected(studentId: string): boolean {
+    return this.selectedStudents.has(studentId);
+  }
+
+  getSelectionStatus(): 'pending' | 'approved' | 'mixed' | null {
+    if (this.selectedStudents.size === 0) return null;
+    
+    const selectedList = this.students.filter(s => this.selectedStudents.has(s.studentId));
+    const statuses = new Set(selectedList.map(s => s.approval_status));
+    
+    if (statuses.size === 1) {
+      const status = Array.from(statuses)[0];
+      return status === 'pending' || status === 'approved' ? status : 'mixed';
+    }
+    
+    return 'mixed';
+  }
+
+  canProcessBatch(): boolean {
+    const status = this.getSelectionStatus();
+    return status === 'pending' || status === 'approved';
+  }
+
+  getBatchButtonText(): string {
+    const status = this.getSelectionStatus();
+    const count = this.selectedStudents.size;
+    
+    if (status === 'pending') {
+      return `Approve Selected (${count})`;
+    } else if (status === 'approved') {
+      return `Disapprove Selected (${count})`;
+    }
+    return 'Select Students';
+  }
+
+  getBatchButtonTooltip(): string {
+    const status = this.getSelectionStatus();
+    if (status === 'mixed') {
+      return 'Cannot process: Selected students have different statuses. Please select students with the same status.';
+    }
+    return '';
+  }
+
+  clearSelections() {
+    this.ngZone.run(() => {
+      this.selectedStudents.clear();
+      this.cdr.detectChanges();
+    });
+  }
+
   // ---- APPROVAL ACTIONS ----
   approveStudent(student: Student, event?: Event) {
     if (event) {
@@ -204,10 +291,13 @@ export class Students implements OnInit, OnDestroy {
       return;
     }
     
-    this.selectedStudentForApproval = student;
-    this.pendingApprovalAction = 'approved';
-    this.showApprovalDialog = true;
-    document.body.classList.add('dialog-open');
+    this.ngZone.run(() => {
+      this.selectedStudentForApproval = student;
+      this.pendingApprovalAction = 'approved';
+      this.showApprovalDialog = true;
+      document.body.classList.add('dialog-open');
+      this.cdr.detectChanges();
+    });
   }
 
   disapproveStudent(student: Student, event?: Event) {
@@ -221,10 +311,13 @@ export class Students implements OnInit, OnDestroy {
       return;
     }
     
-    this.selectedStudentForApproval = student;
-    this.pendingApprovalAction = 'disapproved';
-    this.showApprovalDialog = true;
-    document.body.classList.add('dialog-open');
+    this.ngZone.run(() => {
+      this.selectedStudentForApproval = student;
+      this.pendingApprovalAction = 'disapproved';
+      this.showApprovalDialog = true;
+      document.body.classList.add('dialog-open');
+      this.cdr.detectChanges();
+    });
   }
 
   generateApprovalContent(student: Student, newStatus: 'approved' | 'disapproved') {
@@ -251,11 +344,22 @@ export class Students implements OnInit, OnDestroy {
         this.apiService.generateApprovalContent(approvalRequest).subscribe({
           next: (response) => {
             console.log('🔵 [FRONTEND] API response received:', response);
+            console.log('📧 [FRONTEND] Content length:', response.generatedContent?.length || 0);
+            console.log('📧 [FRONTEND] Content preview (first 100 chars):', response.generatedContent?.substring(0, 100));
+            console.log('📧 [FRONTEND] Content preview (last 100 chars):', response.generatedContent?.substring(response.generatedContent.length - 100));
+            
             this.ngZone.run(() => {
               this.isGeneratingContent = false;
               
               if (response.success && response.generatedContent) {
-                console.log('✅ [FRONTEND] Content generated successfully, length:', response.generatedContent.length);
+                console.log('✅ [FRONTEND] Content generated successfully, full length:', response.generatedContent.length);
+                
+                // Check if content seems complete
+                const hasSignature = /Best regards|Sincerely|Regards/i.test(response.generatedContent.slice(-200));
+                if (!hasSignature) {
+                  console.warn('⚠️ [FRONTEND] Email might be truncated - no signature found');
+                }
+                
                 this.generatedContent = response.generatedContent;
                 this.showApprovalDialog = true;
                 document.body.classList.add('dialog-open');
@@ -357,7 +461,7 @@ Key Performance Highlights:
 You are hereby approved to register for ${student.nextSemesterRegistration}. Please ensure you complete the registration process within the specified deadline.
 
 Best regards,
-Dr. Academic Advisor
+${this.getAdvisorName()}
 Computer Science & Engineering Department
 CUET`;
       } else {
@@ -375,7 +479,7 @@ Performance Analysis:
 You are approved to register for ${student.nextSemesterRegistration}. I recommend meeting with me during office hours to discuss strategies for academic improvement.
 
 Best regards,
-Dr. Academic Advisor
+${this.getAdvisorName()}
 Computer Science & Engineering Department
 CUET`;
       }
@@ -397,7 +501,7 @@ To proceed with registration, you will need to:
 Please schedule an appointment to discuss your path forward. I am committed to helping you succeed academically.
 
 Best regards,
-Dr. Academic Advisor
+${this.getAdvisorName()}
 Computer Science & Engineering Department
 CUET`;
     }
@@ -490,6 +594,12 @@ CUET`;
   }
 
   closeApprovalDialog() {
+    // If in batch processing, ask for confirmation
+    if (this.isBatchProcessing) {
+      this.cancelBatchProcessing();
+      return;
+    }
+    
     this.showApprovalDialog = false;
     this.selectedStudentForApproval = null;
     this.generatedContent = '';
@@ -500,6 +610,185 @@ CUET`;
     
     // Re-enable body scroll
     document.body.classList.remove('dialog-open');
+  }
+
+  // ---- BATCH APPROVAL FUNCTIONALITY ----
+  processBatchApproval() {
+    if (!this.canProcessBatch()) {
+      alert('Please select students with the same status to process.');
+      return;
+    }
+
+    const status = this.getSelectionStatus();
+    if (!status || (status !== 'pending' && status !== 'approved')) {
+      alert('Invalid selection status.');
+      return;
+    }
+
+    // Get selected students
+    this.batchStudents = this.students.filter(s => this.selectedStudents.has(s.studentId));
+    
+    if (this.batchStudents.length === 0) {
+      alert('No students selected.');
+      return;
+    }
+
+    // Determine action based on current status
+    const action: 'approved' | 'disapproved' = status === 'pending' ? 'approved' : 'disapproved';
+    this.pendingApprovalAction = action;
+    
+    // Confirm batch operation
+    const actionText = action === 'approved' ? 'approve' : 'disapprove';
+    const confirmMessage = `You are about to ${actionText} ${this.batchStudents.length} students. Each email will be generated and shown for your review one by one. Continue?`;
+    
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Start batch processing
+    this.isBatchProcessing = true;
+    this.currentBatchIndex = 0;
+    this.processNextBatchStudent();
+  }
+
+  processNextBatchStudent() {
+    this.ngZone.run(() => {
+      if (this.currentBatchIndex >= this.batchStudents.length) {
+        // Batch complete
+        this.completeBatchProcessing();
+        return;
+      }
+
+      // Get current student
+      const student = this.batchStudents[this.currentBatchIndex];
+      this.selectedStudentForApproval = student;
+      
+      // Generate content and show dialog
+      this.showApprovalDialog = true;
+      document.body.classList.add('dialog-open');
+      
+      // Use generic or AI based on user preference
+      if (this.useGenericForAll) {
+        this.useAIContent = false;
+      }
+      
+      this.cdr.detectChanges();
+      this.generateApprovalContent(student, this.pendingApprovalAction!);
+    });
+  }
+
+  sendAndNext() {
+    if (!this.selectedStudentForApproval || !this.generatedContent || !this.pendingApprovalAction) {
+      return;
+    }
+
+    this.isSendingEmail = true;
+    const newStatus = this.pendingApprovalAction;
+    const student = this.selectedStudentForApproval;
+    
+    if (!student) return;
+
+    // Send email via API
+    if (!this.isUsingMockData) {
+      this.apiService.sendApprovalEmail(
+        student.studentId,
+        this.generatedContent,
+        newStatus
+      ).subscribe({
+        next: (response) => {
+          console.log('✅ [FRONTEND] Batch email sent:', response);
+          this.ngZone.run(() => {
+            this.isSendingEmail = false;
+            if (response.success) {
+              // Update student status
+              student.approval_status = newStatus === 'disapproved' ? 'pending' : 'approved';
+              this.updateComputedValues();
+              
+              // Move to next student
+              this.currentBatchIndex++;
+              this.closeApprovalDialogForBatch();
+              
+              // Process next after a brief delay
+              setTimeout(() => this.processNextBatchStudent(), 300);
+            } else {
+              alert('Failed to send email: ' + (response.message || 'Unknown error'));
+              this.isSendingEmail = false;
+            }
+            this.cdr.detectChanges();
+          });
+        },
+        error: (error) => {
+          this.ngZone.run(() => {
+            console.error('❌ [FRONTEND] Batch email error:', error);
+            this.isSendingEmail = false;
+            
+            // Still move to next on error
+            if (confirm('Failed to send email. Continue with next student?')) {
+              this.currentBatchIndex++;
+              this.closeApprovalDialogForBatch();
+              setTimeout(() => this.processNextBatchStudent(), 300);
+            } else {
+              this.completeBatchProcessing();
+            }
+            this.cdr.detectChanges();
+          });
+        }
+      });
+    } else {
+      // Simulate sending
+      setTimeout(() => {
+        student.approval_status = newStatus;
+        this.studentService.updateStudent(student);
+        this.updateComputedValues();
+        
+        console.log(`Batch Email ${this.currentBatchIndex + 1}/${this.batchStudents.length} sent to ${student.email}`);
+        
+        this.isSendingEmail = false;
+        this.currentBatchIndex++;
+        this.closeApprovalDialogForBatch();
+        
+        setTimeout(() => this.processNextBatchStudent(), 300);
+      }, 1000);
+    }
+  }
+
+  cancelBatchProcessing() {
+    if (confirm(`Cancel batch processing? ${this.currentBatchIndex} of ${this.batchStudents.length} emails have been processed.`)) {
+      this.completeBatchProcessing();
+    }
+  }
+
+  private completeBatchProcessing() {
+    this.ngZone.run(() => {
+      const processed = this.currentBatchIndex;
+      const total = this.batchStudents.length;
+      
+      this.isBatchProcessing = false;
+      this.batchStudents = [];
+      this.currentBatchIndex = 0;
+      this.useGenericForAll = false;
+      this.closeApprovalDialog();
+      this.clearSelections();
+      this.cdr.detectChanges();
+      
+      if (processed > 0) {
+        alert(`Batch processing complete! ✅ ${processed} of ${total} emails processed.`);
+        // Refresh data
+        this.studentService.refreshStudents();
+      }
+    });
+  }
+
+  private closeApprovalDialogForBatch() {
+    this.ngZone.run(() => {
+      this.showApprovalDialog = false;
+      this.selectedStudentForApproval = null;
+      this.generatedContent = '';
+      this.isGeneratingContent = false;
+      this.isSendingEmail = false;
+      this.cdr.detectChanges();
+      // Don't reset pendingApprovalAction or useAIContent during batch
+    });
   }
 
   // ---- APPROVE ALL FUNCTIONALITY ----

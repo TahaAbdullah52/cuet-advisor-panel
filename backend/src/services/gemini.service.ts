@@ -20,6 +20,7 @@ const model = genAI.getGenerativeModel({ model: 'models/gemini-1.5-flash-latest'
  * @param latestGPA - GPA from latest term
  * @param overallCGPA - Overall CGPA
  * @param decision - "approved" or "rejected"
+ * @param advisorName - Name of the advisor (default: "Dr. Academic Advisor")
  * @returns Generated email content
  */
 export const generateApprovalEmail = async (
@@ -27,7 +28,8 @@ export const generateApprovalEmail = async (
   latestTerm: string,
   latestGPA: number,
   overallCGPA: number,
-  decision: 'approved' | 'rejected'
+  decision: 'approved' | 'rejected',
+  advisorName: string = 'Dr. Academic Advisor'
 ): Promise<string> => {
   // Use Ollama if configured (free, no limits, runs locally)
   if (AI_SERVICE === 'ollama') {
@@ -38,8 +40,8 @@ export const generateApprovalEmail = async (
     
     if (ollamaAvailable) {
       try {
-        console.log('🚀 Calling Ollama with:', { studentName, latestTerm, latestGPA, overallCGPA, decision });
-        const result = await generateApprovalEmailWithOllama(studentName, latestTerm, latestGPA, overallCGPA, decision);
+        console.log('🚀 Calling Ollama with:', { studentName, latestTerm, latestGPA, overallCGPA, decision, advisorName });
+        const result = await generateApprovalEmailWithOllama(studentName, latestTerm, latestGPA, overallCGPA, decision, advisorName);
         console.log('✅ Ollama generated email successfully, length:', result.length);
         return result;
       } catch (error: any) {
@@ -57,12 +59,12 @@ export const generateApprovalEmail = async (
   
   try {
     const prompt = decision === 'approved'
-      ? `Write a brief approval email (80-100 words) from Dr. Academic Advisor, CSE Dept, CUET to ${studentName}.
+      ? `Write a brief approval email (80-100 words) from ${advisorName}, CSE Dept, CUET to ${studentName}.
 Content: Approve registration for next semester. Mention ${latestTerm} GPA: ${latestGPA}, CGPA: ${overallCGPA}. Congratulate performance.
-Format: "Dear ${studentName}," → body → "Best regards,\nDr. Academic Advisor\nCSE Department, CUET"`
-      : `Write a brief email (80-100 words) from Dr. Academic Advisor, CSE Dept, CUET to ${studentName}.
+Format: "Dear ${studentName}," → body → "Best regards,\n${advisorName}\nCSE Department, CUET"`
+      : `Write a brief email (80-100 words) from ${advisorName}, CSE Dept, CUET to ${studentName}.
 Content: Registration needs review. Mention ${latestTerm} GPA: ${latestGPA}, CGPA: ${overallCGPA}. Suggest meeting to discuss improvement plan.
-Format: "Dear ${studentName}," → body → "Best regards,\nDr. Academic Advisor\nCSE Department, CUET"`;
+Format: "Dear ${studentName}," → body → "Best regards,\n${advisorName}\nCSE Department, CUET"`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;

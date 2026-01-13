@@ -323,16 +323,23 @@ export const generateApprovalContent = async (req: Request, res: Response): Prom
       return;
     }
 
+    // Get advisor details for email signature
+    console.log('🟢 [BACKEND] Fetching advisor details...');
+    const advisor = await (await import('../models/Advisor.model')).default.findById(advisorId);
+    const advisorName = advisor?.name || 'Dr. Academic Advisor';
+    console.log('🟢 [BACKEND] Advisor name:', advisorName);
+
     // Generate email content using Gemini/Ollama
     console.log('🟢 [BACKEND] Calling generateApprovalEmail...');
-    console.log('Parameters:', { name: student.name, latestTerm, latestGPA, cgpa: student.cgpa, newStatus });
+    console.log('Parameters:', { name: student.name, latestTerm, latestGPA, cgpa: student.cgpa, newStatus, advisorName });
     const startTime = Date.now();
     const generatedContent = await generateApprovalEmail(
       student.name,
       latestTerm,
       latestGPA || 0,
       student.cgpa || 0,
-      newStatus as 'approved' | 'rejected'
+      newStatus as 'approved' | 'rejected',
+      advisorName
     );
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`✅ [BACKEND] Email generated in ${duration}s, length: ${generatedContent.length}`);

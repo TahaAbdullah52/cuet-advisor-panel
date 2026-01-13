@@ -611,6 +611,18 @@ export class ApiService {
       }).pipe(delay(this.mockDelay));
     }
 
+    // Get advisor name from localStorage
+    let advisorName = 'Dr. Academic Advisor';
+    try {
+      const advisorData = localStorage.getItem('advisor');
+      if (advisorData) {
+        const advisor = JSON.parse(advisorData);
+        advisorName = advisor.name || 'Dr. Academic Advisor';
+      }
+    } catch (e) {
+      console.error('Error getting advisor name:', e);
+    }
+
     // Generate mock ML content based on student performance
     let generatedContent = '';
     const latestTerm = student.terms
@@ -633,7 +645,7 @@ Key Performance Highlights:
 You are hereby approved to register for ${student.nextSemesterRegistration}. Please ensure you complete the registration process within the specified deadline.
 
 Best regards,
-Dr. Academic Advisor
+${advisorName}
 Computer Science & Engineering Department
 CUET`;
       } else {
@@ -651,7 +663,7 @@ Performance Analysis:
 You are approved to register for ${student.nextSemesterRegistration}. I recommend meeting with me during office hours to discuss strategies for academic improvement.
 
 Best regards,
-Dr. Academic Advisor
+${advisorName}
 Computer Science & Engineering Department
 CUET`;
       }
@@ -673,7 +685,7 @@ To proceed with registration, you will need to:
 Please schedule an appointment to discuss your path forward. I am committed to helping you succeed academically.
 
 Best regards,
-Dr. Academic Advisor
+${advisorName}
 Computer Science & Engineering Department
 CUET`;
     }

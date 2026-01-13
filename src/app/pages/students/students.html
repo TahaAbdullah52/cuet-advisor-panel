@@ -24,9 +24,35 @@
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-lg font-semibold academic-title">Search & Filter</h2>
       <div class="flex space-x-3">
-        <!-- Approve All Button -->
+        <!-- Batch Action Button -->
         <button 
-          *ngIf="pendingStudentsCount > 0"
+          *ngIf="selectedStudents.size > 0"
+          (click)="processBatchApproval()"
+          [disabled]="!canProcessBatch()"
+          [title]="getBatchButtonTooltip()"
+          class="px-4 py-2 flex items-center space-x-2 font-medium rounded-md transition-all"
+          [class.btn-success]="getSelectionStatus() === 'pending' && canProcessBatch()"
+          [class.btn-danger]="getSelectionStatus() === 'approved' && canProcessBatch()"
+          [class.bg-gray-300]="!canProcessBatch()"
+          [class.text-gray-500]="!canProcessBatch()"
+          [class.cursor-not-allowed]="!canProcessBatch()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>{{ getBatchButtonText() }}</span>
+        </button>
+
+        <!-- Clear Selection Button -->
+        <button 
+          *ngIf="selectedStudents.size > 0"
+          (click)="clearSelections()"
+          class="btn-secondary text-sm">
+          Clear Selection
+        </button>
+        
+        <!-- Old Approve All Button (keeping for backward compatibility) -->
+        <button 
+          *ngIf="pendingStudentsCount > 0 && selectedStudents.size === 0"
           (click)="approveAll()"
           class="btn-success px-4 py-2 flex items-center space-x-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,6 +150,13 @@
       <table class="academic-table">
         <thead>
           <tr>
+            <th class="w-12">
+              <div class="flex items-center justify-center">
+                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                </svg>
+              </div>
+            </th>
             <th>Student ID</th>
             <th>Name</th>
             <th>Registration Status</th>
@@ -138,6 +171,18 @@
           <tr *ngFor="let s of paginatedStudents" 
               class="clickable-row"
               (click)="viewStudentDetails(s)">
+
+            <!-- Checkbox for selection -->
+            <td (click)="$event.stopPropagation()">
+              <div class="flex items-center justify-center">
+                <input 
+                  type="checkbox"
+                  [checked]="isSelected(s.studentId)"
+                  (change)="toggleSelection(s.studentId, $event)"
+                  class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+                  *ngIf="s.graduationStatus === 'active' && s.registrationStatus === 'registered'" />
+              </div>
+            </td>
 
             <!-- Student ID -->
             <td class="font-mono font-medium">{{ s.studentId }}</td>
@@ -247,7 +292,7 @@
 
           <!-- Empty State -->
           <tr *ngIf="paginatedStudents.length === 0">
-            <td colspan="6" class="p-8 text-center">
+            <td colspan="8" class="p-8 text-center">
               <div class="flex flex-col items-center space-y-3">
                 <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
@@ -293,6 +338,18 @@
               Review {{ useAIContent ? 'AI-Generated' : 'Generic' }} {{ pendingApprovalAction === 'approved' ? 'Approval' : 'Disapproval' }} Email
             </span>
           </h3>
+          
+          <!-- Batch Progress Indicator -->
+          <div *ngIf="isBatchProcessing" class="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+            <p class="text-sm text-blue-700 font-medium">
+              📊 Batch Processing: Student {{ currentBatchIndex + 1 }} of {{ batchStudents.length }}
+            </p>
+            <div class="mt-1 w-full bg-blue-200 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                   [style.width.%]="((currentBatchIndex) / batchStudents.length) * 100"></div>
+            </div>
+          </div>
+          
           <p class="text-sm academic-muted mt-1" *ngIf="selectedStudentForApproval">
             <strong>Student:</strong> {{ selectedStudentForApproval.name }} ({{ selectedStudentForApproval.studentId }})
             <br><strong>Email:</strong> {{ selectedStudentForApproval.email }}
@@ -326,6 +383,23 @@
 
       <!-- Content Type Selection -->
       <div *ngIf="!isGeneratingContent && !generatedContent" class="space-y-4">
+        
+        <!-- Use Generic for All Option (only in batch mode) -->
+        <div *ngIf="isBatchProcessing && currentBatchIndex === 0" class="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+          <label class="flex items-center space-x-3 cursor-pointer">
+            <input 
+              type="checkbox" 
+              [(ngModel)]="useGenericForAll"
+              class="w-4 h-4 text-amber-600 border-gray-300 rounded focus:ring-amber-500">
+            <div>
+              <p class="text-sm font-medium text-amber-900">Use Generic Template for All Students</p>
+              <p class="text-xs text-amber-700 mt-1">
+                Speed up batch processing by using generic email template for all {{ batchStudents.length }} students (skips AI generation)
+              </p>
+            </div>
+          </label>
+        </div>
+        
         <div>
           <h4 class="text-md font-medium academic-title mb-3">
             Choose Content Type for {{ pendingApprovalAction === 'approved' ? 'Approval' : 'Disapproval' }}
@@ -453,7 +527,7 @@
         <!-- Content Preview -->
         <div>
           <label class="block text-sm font-medium academic-text mb-2">
-            Email Content Preview (You can edit before sending)
+            Email Content (Editable)
           </label>
           <textarea
             [(ngModel)]="generatedContent"
@@ -470,26 +544,43 @@
     </div>
 
     <!-- Dialog Actions -->
-    <div class="p-6 border-t border-gray-200 flex items-center justify-end space-x-3">
+    <div class="p-6 border-t border-gray-200 flex items-center justify-between">
       
-      <button 
-        (click)="closeApprovalDialog()"
-        class="btn-secondary">
-        Cancel
-      </button>
+      <div>
+        <button 
+          (click)="closeApprovalDialog()"
+          class="btn-secondary">
+          {{ isBatchProcessing ? 'Cancel Batch' : 'Cancel' }}
+        </button>
+      </div>
 
-      <button 
-        *ngIf="!isGeneratingContent && generatedContent"
-        (click)="sendApprovalEmail()"
-        [disabled]="isSendingEmail"
-        class="btn-primary flex items-center space-x-2">
-        
-        <div *ngIf="isSendingEmail" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-        <svg *ngIf="!isSendingEmail" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-        </svg>
-        <span>{{ isSendingEmail ? 'Sending...' : 'Send Email' }}</span>
-      </button>
+      <div class="flex items-center space-x-3">
+        <button 
+          *ngIf="!isGeneratingContent && generatedContent && !isBatchProcessing"
+          (click)="sendApprovalEmail()"
+          [disabled]="isSendingEmail"
+          class="btn-primary flex items-center space-x-2">
+          
+          <div *ngIf="isSendingEmail" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <svg *ngIf="!isSendingEmail" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+          </svg>
+          <span>{{ isSendingEmail ? 'Sending...' : 'Send Email' }}</span>
+        </button>
+
+        <button 
+          *ngIf="!isGeneratingContent && generatedContent && isBatchProcessing"
+          (click)="sendAndNext()"
+          [disabled]="isSendingEmail"
+          class="btn-primary flex items-center space-x-2">
+          
+          <div *ngIf="isSendingEmail" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          <svg *ngIf="!isSendingEmail" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>{{ isSendingEmail ? 'Sending...' : 'Send & Next' }}</span>
+        </button>
+      </div>
 
     </div>
 
