@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -20,7 +20,8 @@ export class Login {
 
   constructor(
     private router: Router,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef
   ) {
     this.isUsingMockData = this.apiService.isUsingMockData();
   }
@@ -33,6 +34,7 @@ export class Login {
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.cdr.detectChanges(); // Force update
     
     const credentials: LoginCredentials = {
       email: this.email,
@@ -41,20 +43,41 @@ export class Login {
 
     this.apiService.login(credentials).subscribe({
       next: (response) => {
-        this.isLoading = false;
-        if (response.success) {
-          // Store advisor info in localStorage for session management
+        console.log('Login response:', response);
+        this.isLoading = false; // ALWAYS reset loading
+        this.cdr.detectChanges(); // Force update UI
+        
+        if (response && response.success) {
+          // Store token and advisor info in localStorage
+          if (response.token) {
+            localStorage.setItem('token', response.token);
+          }
           if (response.advisor) {
             localStorage.setItem('advisor', JSON.stringify(response.advisor));
           }
           this.router.navigate(['/dashboard']);
         } else {
-          this.errorMessage = response.message || 'Login failed';
+          // Show error message from backend
+          this.errorMessage = response?.message || 'Login failed. Please try again.';
         }
       },
       error: (error) => {
-        this.isLoading = false;
-        this.errorMessage = error.message || 'Invalid email or password';
+        console.error('Login error handler called:', error);
+        this.isLoading = false; // ALWAYS reset loading
+        this.cdr.detectChanges(); // Force update UI
+        
+        // Handle different error formats from backend
+        if (error.error && error.error.message) {
+          this.errorMessage = error.error.message;
+        } else if (error.message) {
+          this.errorMessage = error.message;
+        } else if (error.status === 0) {
+          this.errorMessage = 'Cannot connect to server. Please check if backend is running.';
+        } else if (error.status === 401) {
+          this.errorMessage = 'Invalid email or password';
+        } else {
+          this.errorMessage = 'An error occurred. Please try again.';
+        }
       }
     });
   }

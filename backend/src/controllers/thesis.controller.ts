@@ -13,7 +13,7 @@ export const addStudentToThesis = async (req: Request, res: Response): Promise<v
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -21,7 +21,7 @@ export const addStudentToThesis = async (req: Request, res: Response): Promise<v
 
     if (!studentId) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'studentId is required'
       });
       return;
@@ -35,7 +35,7 @@ export const addStudentToThesis = async (req: Request, res: Response): Promise<v
 
     if (!student) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Student not found or does not belong to this advisor'
       });
       return;
@@ -44,7 +44,7 @@ export const addStudentToThesis = async (req: Request, res: Response): Promise<v
     // Check if already linked to thesis
     if (student.thesisInfo) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'Student is already linked to thesis supervision'
       });
       return;
@@ -62,14 +62,14 @@ export const addStudentToThesis = async (req: Request, res: Response): Promise<v
     await student.save();
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: student,
       message: 'Student added to thesis supervision successfully'
     });
   } catch (error: any) {
     console.error('Add student to thesis error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to add student to thesis supervision',
       error: error.message
     });
@@ -87,7 +87,7 @@ export const updateThesisInfo = async (req: Request, res: Response): Promise<voi
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -101,19 +101,23 @@ export const updateThesisInfo = async (req: Request, res: Response): Promise<voi
 
     if (!student) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Student not found'
       });
       return;
     }
 
     // Check if student has thesis info initialized
+    // If not, initialize it (all batch 20-21 students are eligible for thesis)
     if (!student.thesisInfo) {
-      res.status(400).json({
-        status: 'error',
-        message: 'Student is not linked to thesis supervision. Please add them first.'
-      });
-      return;
+      console.log(`📝 [BACKEND] Initializing thesis info for student: ${student.name}`);
+      student.thesisInfo = {
+        topicAssigned: false,
+        topicName: '',
+        defenseDate: '',
+        assignedTask: '',
+        meetingDateTime: ''
+      };
     }
 
     // Update thesis info with provided fields
@@ -125,17 +129,19 @@ export const updateThesisInfo = async (req: Request, res: Response): Promise<voi
       }
     });
 
-    await student.save();
+    const updatedStudent = await student.save();
 
+    // Return transformed student object using toJSON
+    const transformedStudent = updatedStudent.toJSON();
     res.status(200).json({
-      status: 'success',
-      data: student,
+      success: true,
+      data: transformedStudent,
       message: 'Thesis information updated successfully'
     });
   } catch (error: any) {
     console.error('Update thesis info error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to update thesis information',
       error: error.message
     });
@@ -153,7 +159,7 @@ export const removeStudentFromThesis = async (req: Request, res: Response): Prom
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -167,7 +173,7 @@ export const removeStudentFromThesis = async (req: Request, res: Response): Prom
 
     if (!student) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Student not found'
       });
       return;
@@ -176,7 +182,7 @@ export const removeStudentFromThesis = async (req: Request, res: Response): Prom
     // Check if student has thesis info
     if (!student.thesisInfo) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'Student is not linked to thesis supervision'
       });
       return;
@@ -187,14 +193,14 @@ export const removeStudentFromThesis = async (req: Request, res: Response): Prom
     await student.save();
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: true,
       message: 'Student removed from thesis supervision successfully'
     });
   } catch (error: any) {
     console.error('Remove student from thesis error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to remove student from thesis supervision',
       error: error.message
     });
@@ -211,7 +217,7 @@ export const getThesisStudents = async (req: Request, res: Response): Promise<vo
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -224,14 +230,14 @@ export const getThesisStudents = async (req: Request, res: Response): Promise<vo
     }).sort({ student_id: 1 });
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: students,
       message: 'Thesis students retrieved successfully'
     });
   } catch (error: any) {
     console.error('Get thesis students error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to fetch thesis students',
       error: error.message
     });

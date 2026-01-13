@@ -42,6 +42,11 @@ export interface IStudent extends Document {
   approval_date?: Date;
   approval_note?: string;
   
+  // Registration and graduation tracking
+  next_semester_registration?: string;
+  registration_status?: 'registered' | 'not_registered';
+  graduation_status?: 'graduated' | 'active';
+  
   // 8 terms with closed credit system
   L1T1: ITerm;
   L1T2: ITerm;
@@ -209,6 +214,22 @@ const StudentSchema = new Schema<IStudent>(
       trim: true
     },
     
+    // Registration and graduation tracking
+    next_semester_registration: {
+      type: String,
+      trim: true
+    },
+    registration_status: {
+      type: String,
+      enum: ['registered', 'not_registered'],
+      default: 'not_registered'
+    },
+    graduation_status: {
+      type: String,
+      enum: ['graduated', 'active'],
+      default: 'active'
+    },
+    
     // 8 Terms
     L1T1: {
       type: TermSchema,
@@ -250,7 +271,49 @@ const StudentSchema = new Schema<IStudent>(
     }
   },
   {
-    timestamps: true
+    timestamps: true,
+    toJSON: {
+      transform: (_doc, ret) => {
+        // Transform L1T1-L4T2 properties to terms array for frontend
+        const termKeys = ['L1T1', 'L1T2', 'L2T1', 'L2T2', 'L3T1', 'L3T2', 'L4T1', 'L4T2'];
+        const terms = termKeys
+          .filter(key => {
+            const term = (ret as any)[key];
+            return term && term.courses && term.courses.length > 0;
+          })
+          .map(key => {
+            const term = (ret as any)[key];
+            return {
+              termId: key,
+              approved: true,
+              gpa: term.term_gpa || 0,
+              courses: term.courses.map((course: any) => ({
+                courseCode: course.code,
+                courseCredit: course.credits,
+                sessional: course.name?.includes('Sessional') || course.name?.includes('Lab') || false,
+                result: course.grade || 'N/A',
+                courseType: 'regular'
+              })),
+              resultPublished: true
+            };
+          });
+
+        // Transform to frontend format
+        return {
+          studentId: ret.student_id,
+          name: ret.name,
+          email: ret.email,
+          batch: ret.batch,
+          terms: terms,
+          overallCgpa: ret.cgpa || 0,
+          nextSemesterRegistration: ret.next_semester_registration,
+          registrationStatus: ret.registration_status || 'not_registered',
+          approval_status: ret.approval_status,
+          graduationStatus: ret.graduation_status || 'active',
+          thesisInfo: ret.thesisInfo
+        };
+      }
+    }
   }
 );
 

@@ -1,7 +1,9 @@
 import 'dotenv/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateApprovalEmailWithOllama, checkOllamaStatus } from './ollama.service';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const AI_SERVICE = process.env.AI_SERVICE || 'ollama'; // Default to Ollama (free, no limits)
 
 if (!GEMINI_API_KEY) {
   console.warn('⚠️  GEMINI_API_KEY not found in environment variables');
@@ -9,7 +11,7 @@ if (!GEMINI_API_KEY) {
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ model: 'models/gemini-2.5-flash' });
+const model = genAI.getGenerativeModel({ model: 'models/gemini-1.5-flash-latest' });
 
 /**
  * Generate approval/disapproval email content using Gemini AI
@@ -27,39 +29,40 @@ export const generateApprovalEmail = async (
   overallCGPA: number,
   decision: 'approved' | 'rejected'
 ): Promise<string> => {
+  // Use Ollama if configured (free, no limits, runs locally)
+  if (AI_SERVICE === 'ollama') {
+    console.log('📝 Using Ollama (local model) for email generation...');
+    console.log('🔍 AI_SERVICE =', AI_SERVICE);
+    const ollamaAvailable = await checkOllamaStatus();
+    console.log('🔍 Ollama status check result:', ollamaAvailable);
+    
+    if (ollamaAvailable) {
+      try {
+        console.log('🚀 Calling Ollama with:', { studentName, latestTerm, latestGPA, overallCGPA, decision });
+        const result = await generateApprovalEmailWithOllama(studentName, latestTerm, latestGPA, overallCGPA, decision);
+        console.log('✅ Ollama generated email successfully, length:', result.length);
+        return result;
+      } catch (error: any) {
+        console.error('❌ Ollama failed with error:', error);
+        console.error('Error stack:', error.stack);
+        // Continue to Gemini fallback
+      }
+    } else {
+      console.warn('⚠️  Ollama not available, falling back to Gemini');
+    }
+  }
+
+  // Use Gemini API (has quota limits)
+  console.log('📝 Using Gemini API for email generation...');
+  
   try {
-    // Build prompt based on decision
-    const tone = decision === 'approved' 
-      ? 'congratulatory and encouraging'
-      : 'constructive and supportive';
-
-    const prompt = `You are Dr. Academic Advisor from the Department of Computer Science & Engineering at Chittagong University of Engineering & Technology (CUET).
-
-Generate a formal, personalized academic email to ${decision === 'approved' ? 'approve' : 'inform about disapproval of'} a student's semester registration.
-
-Student Details:
-- Name: ${studentName}
-- Latest Completed Semester: ${latestTerm}
-- Latest Semester GPA: ${latestGPA}
-- Overall CGPA: ${overallCGPA}
-- Decision: ${decision.toUpperCase()}
-
-Email Requirements:
-1. Start with "Dear ${studentName},"
-2. Use a ${tone} tone
-3. Reference their specific academic performance (${latestTerm} GPA: ${latestGPA}, Overall CGPA: ${overallCGPA})
-${decision === 'approved' 
-  ? '4. Congratulate them on their performance\n5. Approve their registration for the next semester\n6. Encourage continued excellence'
-  : '4. Express concern about their academic performance\n5. Explain that their registration needs reconsideration\n6. Suggest improvement steps (attend office hours, form study groups, seek tutoring)\n7. Offer support and guidance'
-}
-7. Keep it professional and concise (150-200 words)
-8. End with:
-   "Best regards,
-   Dr. Academic Advisor
-   Department of Computer Science & Engineering
-   Chittagong University of Engineering & Technology"
-
-Generate ONLY the email content, no subject line or additional text.`;
+    const prompt = decision === 'approved'
+      ? `Write a brief approval email (80-100 words) from Dr. Academic Advisor, CSE Dept, CUET to ${studentName}.
+Content: Approve registration for next semester. Mention ${latestTerm} GPA: ${latestGPA}, CGPA: ${overallCGPA}. Congratulate performance.
+Format: "Dear ${studentName}," → body → "Best regards,\nDr. Academic Advisor\nCSE Department, CUET"`
+      : `Write a brief email (80-100 words) from Dr. Academic Advisor, CSE Dept, CUET to ${studentName}.
+Content: Registration needs review. Mention ${latestTerm} GPA: ${latestGPA}, CGPA: ${overallCGPA}. Suggest meeting to discuss improvement plan.
+Format: "Dear ${studentName}," → body → "Best regards,\nDr. Academic Advisor\nCSE Department, CUET"`;
 
     const result = await model.generateContent(prompt);
     const response = result.response;

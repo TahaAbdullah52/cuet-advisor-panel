@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
@@ -29,7 +29,9 @@ export class StudentDetails implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private studentService: StudentService
+    private studentService: StudentService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit() {
@@ -44,33 +46,39 @@ export class StudentDetails implements OnInit, OnDestroy {
       // Subscribe to student updates from service
       this.subscription.add(
         this.studentService.students$.subscribe(students => {
-          console.log('Student details: received students', students.length);
-          const found = students.find(s => s.studentId === id);
-          if (found) {
-            console.log('Student details: found student', found.name);
-            this.student = found;
-            if (this.student.terms && this.student.terms.length > 0) {
-              this.selectedTerm = this.student.terms[0];
-              this.prepareChart();
+          this.ngZone.run(() => {
+            console.log('Student details: received students', students.length);
+            const found = students.find(s => s.studentId === id);
+            if (found) {
+              console.log('Student details: found student', found.name);
+              this.student = found;
+              if (this.student.terms && this.student.terms.length > 0) {
+                this.selectedTerm = this.student.terms[0];
+                this.prepareChart();
+              }
+              this.cdr.detectChanges();
+            } else if (students.length > 0) {
+              console.log('Student details: student not found, redirecting');
+              this.router.navigate(['/students']);
             }
-          } else if (students.length > 0) {
-            console.log('Student details: student not found, redirecting');
-            this.router.navigate(['/students']);
-          }
+          });
         })
       );
 
       // Also try to get individual student data as fallback
       this.subscription.add(
         this.studentService.getStudent(id).subscribe(student => {
-          if (student) {
-            console.log('Student details: got individual student', student.name);
-            this.student = student;
-            if (this.student.terms && this.student.terms.length > 0) {
-              this.selectedTerm = this.student.terms[0];
-              this.prepareChart();
+          this.ngZone.run(() => {
+            if (student) {
+              console.log('Student details: got individual student', student.name);
+              this.student = student;
+              if (this.student.terms && this.student.terms.length > 0) {
+                this.selectedTerm = this.student.terms[0];
+                this.prepareChart();
+              }
+              this.cdr.detectChanges();
             }
-          }
+          });
         })
       );
     } else {

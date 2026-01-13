@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import Routine from '../models/Routine.model';
+import Routine, { IRoutineEntry } from '../models/Routine.model';
 import { AuthRequest } from '../types/auth.types';
 
 /**
@@ -12,7 +12,7 @@ export const getRoutines = async (req: Request, res: Response): Promise<void> =>
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -35,7 +35,7 @@ export const getRoutines = async (req: Request, res: Response): Promise<void> =>
     const routines = await Routine.find(query).sort({ semester: 1, academic_year: 1 });
 
     // Filter by day if provided (since day is in entries array)
-    let filteredRoutines = routines;
+    let filteredRoutines: any[] = routines;
     if (req.query.day) {
       filteredRoutines = routines.map(routine => {
         const filteredEntries = routine.entries.filter(
@@ -48,15 +48,35 @@ export const getRoutines = async (req: Request, res: Response): Promise<void> =>
       }).filter(routine => routine.entries.length > 0);
     }
 
+    // Transform data to match frontend format
+    // Flatten entries from nested routine structure to individual RoutineEntry objects
+    const transformedData = filteredRoutines.flatMap(routine => 
+      routine.entries.map((entry: IRoutineEntry) => {
+        // Parse time range like "08:30 - 10:00" into start and end times
+        const [startTime, endTime] = entry.time.split('-').map((t: string) => t.trim());
+        
+        return {
+          id: routine._id.toString() + '_' + entry.course_code,
+          courseName: entry.course_name,
+          batchName: `Batch ${routine.academic_year.substring(0, 2)}`, // Extract batch from year
+          roomNo: entry.room,
+          dayName: entry.day,
+          startTime: startTime,
+          endTime: endTime,
+          type: entry.type === 'lab' ? 'Lab' : 'Class'
+        };
+      })
+    );
+
     res.status(200).json({
-      status: 'success',
-      data: filteredRoutines,
+      success: true,
+      data: transformedData,
       message: 'Routines retrieved successfully'
     });
   } catch (error: any) {
     console.error('Get routines error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to fetch routines',
       error: error.message
     });
@@ -74,7 +94,7 @@ export const getRoutineById = async (req: Request, res: Response): Promise<void>
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -88,21 +108,21 @@ export const getRoutineById = async (req: Request, res: Response): Promise<void>
 
     if (!routine) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Routine not found'
       });
       return;
     }
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: routine,
       message: 'Routine retrieved successfully'
     });
   } catch (error: any) {
     console.error('Get routine error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to fetch routine',
       error: error.message
     });
@@ -119,7 +139,7 @@ export const createRoutine = async (req: Request, res: Response): Promise<void> 
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -130,7 +150,7 @@ export const createRoutine = async (req: Request, res: Response): Promise<void> 
     // Validate required fields
     if (!semester || !academic_year) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'semester and academic_year are required'
       });
       return;
@@ -146,15 +166,30 @@ export const createRoutine = async (req: Request, res: Response): Promise<void> 
 
     await routine.save();
 
+    // Transform created routine to match frontend format (same as getRoutines)
+    const transformedData = routine.entries.map((entry: IRoutineEntry) => {
+      const [startTime, endTime] = entry.time.split('-').map((t: string) => t.trim());
+      return {
+        id: routine._id.toString() + '_' + entry.course_code,
+        courseName: entry.course_name,
+        batchName: `Batch ${routine.academic_year.substring(0, 2)}`,
+        roomNo: entry.room,
+        dayName: entry.day,
+        startTime: startTime,
+        endTime: endTime,
+        type: entry.type === 'lab' ? 'Lab' : 'Class'
+      };
+    });
+
     res.status(201).json({
-      status: 'success',
-      data: routine,
+      success: true,
+      data: transformedData,
       message: 'Routine created successfully'
     });
   } catch (error: any) {
     console.error('Create routine error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to create routine',
       error: error.message
     });
@@ -172,7 +207,7 @@ export const updateRoutine = async (req: Request, res: Response): Promise<void> 
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -186,7 +221,7 @@ export const updateRoutine = async (req: Request, res: Response): Promise<void> 
 
     if (!routine) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Routine not found'
       });
       return;
@@ -203,14 +238,14 @@ export const updateRoutine = async (req: Request, res: Response): Promise<void> 
     await routine.save();
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: routine,
       message: 'Routine updated successfully'
     });
   } catch (error: any) {
     console.error('Update routine error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to update routine',
       error: error.message
     });
@@ -228,7 +263,7 @@ export const deleteRoutine = async (req: Request, res: Response): Promise<void> 
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -242,21 +277,21 @@ export const deleteRoutine = async (req: Request, res: Response): Promise<void> 
 
     if (!routine) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Routine not found'
       });
       return;
     }
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: true,
       message: 'Routine deleted successfully'
     });
   } catch (error: any) {
     console.error('Delete routine error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to delete routine',
       error: error.message
     });
@@ -274,7 +309,7 @@ export const addRoutineEntry = async (req: Request, res: Response): Promise<void
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -288,7 +323,7 @@ export const addRoutineEntry = async (req: Request, res: Response): Promise<void
 
     if (!routine) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Routine not found'
       });
       return;
@@ -298,7 +333,7 @@ export const addRoutineEntry = async (req: Request, res: Response): Promise<void
     const { day, time, course_code, course_name, room, type } = req.body;
     if (!day || !time || !course_code || !course_name || !room || !type) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'All entry fields are required: day, time, course_code, course_name, room, type'
       });
       return;
@@ -317,14 +352,14 @@ export const addRoutineEntry = async (req: Request, res: Response): Promise<void
     await routine.save();
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: routine,
       message: 'Entry added to routine successfully'
     });
   } catch (error: any) {
     console.error('Add routine entry error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to add entry',
       error: error.message
     });
@@ -339,11 +374,11 @@ export const removeRoutineEntry = async (req: Request, res: Response): Promise<v
   try {
     const advisorId = (req as unknown as AuthRequest).advisor?.id;
     const routineId = req.params.id;
-    const entryIndex = parseInt(req.params.entryIndex);
+    const entryIndex = parseInt(Array.isArray(req.params.entryIndex) ? req.params.entryIndex[0] : req.params.entryIndex);
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -357,7 +392,7 @@ export const removeRoutineEntry = async (req: Request, res: Response): Promise<v
 
     if (!routine) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Routine not found'
       });
       return;
@@ -366,7 +401,7 @@ export const removeRoutineEntry = async (req: Request, res: Response): Promise<v
     // Validate index
     if (isNaN(entryIndex) || entryIndex < 0 || entryIndex >= routine.entries.length) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'Invalid entry index'
       });
       return;
@@ -377,14 +412,14 @@ export const removeRoutineEntry = async (req: Request, res: Response): Promise<v
     await routine.save();
 
     res.status(200).json({
-      status: 'success',
+      success: true,
       data: routine,
       message: 'Entry removed from routine successfully'
     });
   } catch (error: any) {
     console.error('Remove routine entry error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to remove entry',
       error: error.message
     });

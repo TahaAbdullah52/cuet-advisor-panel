@@ -56,7 +56,7 @@ temp/
 BACKEND_REFERENCE.md
 PROJECT_STRUCTURE.md
 TODO.md
-
+OLLAMA_SETUP_COMPLETE.md
 # Database
 *.sqlite
 *.db

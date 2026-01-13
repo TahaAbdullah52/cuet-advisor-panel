@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Subscription, interval } from 'rxjs';
@@ -19,6 +19,7 @@ export class Routine implements OnInit, OnDestroy {
 
   todaySchedule: TodaySchedule = { upcoming: [], completed: [] };
   allRoutines: RoutineEntry[] = [];
+  weeklySchedule: Map<string, RoutineEntry[]> = new Map();
   showAddForm = false;
   isLoading = false;
   isAddingRoutine = false;
@@ -41,7 +42,11 @@ export class Routine implements OnInit, OnDestroy {
   typeOptions = ['Class', 'Lab'];
   batchOptions = ['Batch 19', 'Batch 20', 'Batch 21', 'Batch 22', 'Batch 23', 'Batch 24'];
 
-  constructor(private routineService: RoutineService) {}
+  constructor(
+    private routineService: RoutineService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit() {
     // Check if using mock data
@@ -51,15 +56,27 @@ export class Routine implements OnInit, OnDestroy {
     this.subscription.add(
       this.routineService.loading$.subscribe(loading => {
         this.isLoading = loading;
+        this.cdr.detectChanges();
       })
     );
 
     // Subscribe to routine updates
     this.subscription.add(
       this.routineService.routines$.subscribe(routines => {
-        this.allRoutines = routines;
-        this.updateTodaySchedule();
-        console.log('Routines loaded in component:', routines.length);
+        // Run inside NgZone to ensure change detection
+        this.ngZone.run(() => {
+          console.log('📥 Routine subscription fired, count:', routines.length);
+          this.allRoutines = [...routines]; // Create new array reference
+          this.updateTodaySchedule();
+          this.updateWeeklySchedule(); // Pre-compute weekly schedule
+          console.log('Routines loaded in component:', routines.length);
+          console.log('Today schedule updated:', {
+            upcoming: this.todaySchedule.upcoming.length,
+            completed: this.todaySchedule.completed.length,
+            current: this.todaySchedule.current ? 'Yes' : 'No'
+          });
+          this.cdr.detectChanges();
+        });
       })
     );
     
@@ -71,10 +88,8 @@ export class Routine implements OnInit, OnDestroy {
       })
     );
 
-    // Force initial data load if no routines
-    if (this.allRoutines.length === 0) {
-      this.routineService.refreshRoutines();
-    }
+    // Ensure data is loaded (only loads once if not already loaded)
+    this.routineService.ensureDataLoaded();
   }
 
   ngOnDestroy() {
@@ -117,6 +132,28 @@ export class Routine implements OnInit, OnDestroy {
     );
   }
 
+  updateWeeklySchedule() {
+    // Pre-compute routines for each day
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+    // Create completely new Map to ensure change detection
+    const newSchedule = new Map<string, RoutineEntry[]>();
+    
+    days.forEach(day => {
+      const dayRoutines = this.allRoutines
+        .filter(r => r.dayName === day)
+        .sort((a, b) => this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime));
+      newSchedule.set(day, dayRoutines);
+    });
+    
+    this.weeklySchedule = newSchedule; // Replace with new Map reference
+    
+    console.log('📅 Weekly schedule updated:', 
+      Array.from(this.weeklySchedule.entries()).map(([day, routines]) => 
+        `${day}: ${routines.length}`
+      ).join(', ')
+    );
+  }
+
   toggleAddForm() {
     this.showAddForm = !this.showAddForm;
     if (!this.showAddForm) {
@@ -143,12 +180,40 @@ export class Routine implements OnInit, OnDestroy {
 
     this.isAddingRoutine = true;
 
-    this.routineService.addRoutine(this.newRoutine);
-    
-    // Reset form and hide it
-    this.showAddForm = false;
-    this.resetForm();
-    this.isAddingRoutine = false;
+    // Use service which updates global state
+    this.routineService.addRoutine(this.newRoutine).subscribe({
+      next: (success) => {
+        // Use setTimeout to ensure loading state is reset after Angular's change detection
+        setTimeout(() => {
+          this.isAddingRoutine = false;
+          
+          if (success) {
+            console.log('✅ Routine added successfully in component');
+            
+            // Force one more change detection to ensure UI updates
+            this.cdr.detectChanges();
+            
+            // Reset form and hide it after successful add
+            this.showAddForm = false;
+            this.resetForm();
+            
+            // Final change detection after form reset
+            this.cdr.detectChanges();
+          } else {
+            console.error('Failed to add routine');
+            alert('Failed to add routine. Please try again.');
+          }
+        }, 100);
+      },
+      error: (error) => {
+        console.error('Error adding routine:', error);
+        setTimeout(() => {
+          this.isAddingRoutine = false;
+          alert('Error adding routine: ' + (error.message || 'Unknown error'));
+          this.cdr.detectChanges();
+        }, 100);
+      }
+    });
   }
 
   removeRoutine(routine: RoutineEntry) {
@@ -179,9 +244,7 @@ export class Routine implements OnInit, OnDestroy {
   }
 
   getRoutinesByDay(day: string): RoutineEntry[] {
-    return this.allRoutines
-      .filter(r => r.dayName === day)
-      .sort((a, b) => this.timeToMinutes(a.startTime) - this.timeToMinutes(b.startTime));
+    return this.weeklySchedule.get(day) || [];
   }
 
   formatTime(time: string): string {
@@ -206,5 +269,14 @@ export class Routine implements OnInit, OnDestroy {
       const minutes = diffMinutes % 60;
       return `${hours}h ${minutes}m`;
     }
+  }
+
+  // TrackBy function for better performance and change detection
+  trackByRoutineId(index: number, routine: RoutineEntry): string {
+    return routine.id || `${routine.courseName}-${routine.startTime}-${index}`;
+  }
+
+  trackByDay(index: number, day: string): string {
+    return day;
   }
 }

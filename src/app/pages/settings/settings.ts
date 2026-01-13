@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/api.service';
@@ -33,7 +33,11 @@ export class Settings implements OnInit {
     office: 'Room 301, CSE Building'
   };
 
-  constructor(private apiService: ApiService) {}
+  constructor(
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit() {
     this.isUsingMockData = this.apiService.isUsingMockData();
@@ -83,26 +87,42 @@ export class Settings implements OnInit {
 
     this.apiService.updatePassword(passwordData).subscribe({
       next: (response) => {
-        this.isLoading = false;
-        if (response.success) {
-          this.success = true;
-          
-          // Clear form
-          this.currentPassword = '';
-          this.newPassword = '';
-          this.confirmPassword = '';
-          
-          // Hide success message after 3 seconds
-          setTimeout(() => {
+        this.ngZone.run(() => {
+          this.isLoading = false;
+          if (response.success) {
+            // Clear any error and show success
+            this.error = '';
+            this.success = true;
+            
+            // Clear form
+            this.currentPassword = '';
+            this.newPassword = '';
+            this.confirmPassword = '';
+            
+            this.cdr.detectChanges();
+            
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              this.ngZone.run(() => {
+                this.success = false;
+                this.cdr.detectChanges();
+              });
+            }, 3000);
+          } else {
+            // Clear success and show error
             this.success = false;
-          }, 3000);
-        } else {
-          this.error = response.message || 'Failed to update password';
-        }
+            this.error = response.message || 'Failed to update password';
+            this.cdr.detectChanges();
+          }
+        });
       },
       error: (error) => {
-        this.isLoading = false;
-        this.error = error.message || 'Failed to update password';
+        this.ngZone.run(() => {
+          this.isLoading = false;
+          this.success = false;
+          this.error = error.error?.message || error.message || 'Failed to update password';
+          this.cdr.detectChanges();
+        });
       }
     });
   }

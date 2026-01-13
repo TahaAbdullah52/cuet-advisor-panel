@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -64,7 +64,9 @@ export class Students implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private studentService: StudentService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit() {
@@ -74,23 +76,27 @@ export class Students implements OnInit, OnDestroy {
     // Subscribe to loading state
     this.subscription.add(
       this.studentService.loading$.subscribe(loading => {
-        this.isLoading = loading;
+        this.ngZone.run(() => {
+          this.isLoading = loading;
+          this.cdr.detectChanges();
+        });
       })
     );
 
     // Subscribe to student updates
     this.subscription.add(
       this.studentService.students$.subscribe(students => {
-        this.students = students;
-        this.updateComputedValues();
-        console.log('Students loaded in component:', students.length);
+        this.ngZone.run(() => {
+          this.students = [...students]; // Create new array reference
+          this.updateComputedValues();
+          console.log('Students loaded in component:', students.length);
+          this.cdr.detectChanges();
+        });
       })
     );
 
-    // Force initial data load if no students
-    if (this.students.length === 0) {
-      this.studentService.refreshStudents();
-    }
+    // Ensure data is loaded (only loads once if not already loaded)
+    this.studentService.ensureDataLoaded();
   }
 
   ngOnDestroy() {
@@ -222,31 +228,51 @@ export class Students implements OnInit, OnDestroy {
   }
 
   generateApprovalContent(student: Student, newStatus: 'approved' | 'disapproved') {
+    console.log('🔵 [FRONTEND] generateApprovalContent called');
+    console.log('Student:', student.name, student.studentId);
+    console.log('New Status:', newStatus);
+    console.log('Use AI Content:', this.useAIContent);
+    console.log('Is Using Mock Data:', this.isUsingMockData);
+    
     this.isGeneratingContent = true;
     this.generatedContent = '';
     
     if (this.useAIContent) {
       // Use AI-generated content
       if (!this.isUsingMockData) {
+        console.log('🔵 [FRONTEND] Making API call to generate approval content...');
         const approvalRequest: ApprovalRequest = {
           studentId: student.studentId,
           currentStatus: student.approval_status,
           newStatus: newStatus
         };
+        console.log('Request payload:', approvalRequest);
 
         this.apiService.generateApprovalContent(approvalRequest).subscribe({
           next: (response) => {
-            this.isGeneratingContent = false;
-            if (response.success && response.generatedContent) {
-              this.generatedContent = response.generatedContent;
-              this.showApprovalDialog = true;
-              document.body.classList.add('dialog-open');
-            } else {
-              alert('Failed to generate approval content');
-            }
+            console.log('🔵 [FRONTEND] API response received:', response);
+            this.ngZone.run(() => {
+              this.isGeneratingContent = false;
+              
+              if (response.success && response.generatedContent) {
+                console.log('✅ [FRONTEND] Content generated successfully, length:', response.generatedContent.length);
+                this.generatedContent = response.generatedContent;
+                this.showApprovalDialog = true;
+                document.body.classList.add('dialog-open');
+                this.cdr.detectChanges();
+              } else {
+                console.error('❌ [FRONTEND] Failed to generate content:', response);
+                alert('Failed to generate approval content. Please try again.');
+              }
+            });
           },
           error: (error) => {
-            console.warn('Database ML generation failed, falling back to hardcoded content:', error);
+            this.ngZone.run(() => {
+              console.error('❌ [FRONTEND] API error:', error);
+              console.warn('Database ML generation failed, falling back to hardcoded content:', error);
+              this.isGeneratingContent = false;
+              this.cdr.detectChanges();
+            });
             this.generateHardcodedContentFallback(student, newStatus);
           }
         });
@@ -262,8 +288,9 @@ export class Students implements OnInit, OnDestroy {
 
   private generateGenericContent(student: Student, newStatus: 'approved' | 'disapproved') {
     setTimeout(() => {
-      if (newStatus === 'approved') {
-        this.generatedContent = `Dear ${student.name},
+      this.ngZone.run(() => {
+        if (newStatus === 'approved') {
+          this.generatedContent = `Dear ${student.name},
 
 Your registration for ${student.nextSemesterRegistration} has been approved by your advisor.
 
@@ -273,8 +300,8 @@ Best regards,
 Academic Advisor
 Computer Science & Engineering Department
 CUET`;
-      } else {
-        this.generatedContent = `Dear ${student.name},
+        } else {
+          this.generatedContent = `Dear ${student.name},
 
 Your registration for ${student.nextSemesterRegistration} has been disapproved by your advisor.
 
@@ -284,23 +311,28 @@ Best regards,
 Academic Advisor
 Computer Science & Engineering Department
 CUET`;
-      }
-      
-      this.isGeneratingContent = false;
-      this.showApprovalDialog = true;
-      document.body.classList.add('dialog-open');
+        }
+        
+        this.isGeneratingContent = false;
+        this.showApprovalDialog = true;
+        document.body.classList.add('dialog-open');
+        this.cdr.detectChanges();
+      });
     }, 800); // Shorter delay for generic content
   }
 
   private generateHardcodedContentFallback(student: Student, newStatus: 'approved' | 'disapproved') {
     // Generate hardcoded AI content based on student performance
     setTimeout(() => {
-      this.generatedContent = this.generateHardcodedContent(student, newStatus);
-      this.isGeneratingContent = false;
-      this.showApprovalDialog = true;
-      
-      // Prevent body scroll when dialog is open
-      document.body.classList.add('dialog-open');
+      this.ngZone.run(() => {
+        this.generatedContent = this.generateHardcodedContent(student, newStatus);
+        this.isGeneratingContent = false;
+        this.showApprovalDialog = true;
+        
+        // Prevent body scroll when dialog is open
+        document.body.classList.add('dialog-open');
+        this.cdr.detectChanges();
+      });
     }, 1500); // Simulate AI processing time
   }
 
@@ -384,30 +416,47 @@ CUET`;
 
     this.isSendingEmail = true;
     const newStatus = this.pendingApprovalAction;
+    
+    // Store student reference before async operations to avoid null reference
+    const student = this.selectedStudentForApproval;
+    if (!student) return;
 
     // Try database first, then fallback to hardcoded simulation
     if (!this.isUsingMockData) {
       this.apiService.sendApprovalEmail(
-        this.selectedStudentForApproval.studentId,
+        student.studentId,
         this.generatedContent,
         newStatus
       ).subscribe({
         next: (response) => {
-          this.isSendingEmail = false;
-          if (response.success) {
-            // Update student status through the service to ensure database sync
-            this.selectedStudentForApproval!.approval_status = newStatus;
-            this.studentService.updateStudent(this.selectedStudentForApproval!);
-            this.updateComputedValues();
-            this.closeApprovalDialog();
-            alert(`Approval email sent successfully to ${this.selectedStudentForApproval!.email}!`);
-          } else {
-            alert('Failed to send approval email');
-          }
+          console.log('✅ [FRONTEND] Email send response:', response);
+          this.ngZone.run(() => {
+            this.isSendingEmail = false;
+            if (response.success) {
+              // Backend already updated the student status when sending email
+              // For disapproval, student goes back to pending status
+              student.approval_status = newStatus === 'disapproved' ? 'pending' : 'approved';
+              
+              // Update computed values and close dialog
+              this.updateComputedValues();
+              this.closeApprovalDialog();
+              this.cdr.detectChanges();
+              
+              const action = newStatus === 'approved' ? 'Approval' : 'Disapproval';
+              alert(`${action} email sent successfully to ${student.email}!`);
+            } else {
+              alert('Failed to send approval email: ' + (response.message || 'Unknown error'));
+            }
+          });
         },
         error: (error) => {
-          console.warn('Database email sending failed, using simulation:', error);
-          this.simulateEmailSending(newStatus);
+          this.ngZone.run(() => {
+            console.error('❌ [FRONTEND] Email send error:', error);
+            console.warn('Database email sending failed, using simulation:', error);
+            this.isSendingEmail = false;
+            this.cdr.detectChanges();
+            this.simulateEmailSending(newStatus);
+          });
         }
       });
     } else {

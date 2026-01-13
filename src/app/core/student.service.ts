@@ -12,8 +12,19 @@ export class StudentService {
   private isLoading = new BehaviorSubject<boolean>(false);
   public loading$ = this.isLoading.asObservable();
 
+  private initialized = false;
+
   constructor(private apiService: ApiService) {
-    this.loadStudents();
+    // Don't auto-load in constructor to prevent race conditions
+    // Components will call refreshStudents() or ensureDataLoaded() when needed
+  }
+
+  // Ensure data is loaded (only loads once)
+  ensureDataLoaded(): void {
+    if (!this.initialized && this.studentsSubject.value.length === 0) {
+      this.initialized = true;
+      this.loadStudents();
+    }
   }
 
   // Load students from API (with mock fallback)
@@ -82,6 +93,17 @@ export class StudentService {
         console.error('Error updating student:', error);
       }
     });
+  }
+
+  // Update student in cache without API call (for when update already happened)
+  updateStudentInCache(updatedStudent: Student): void {
+    const students = this.studentsSubject.value;
+    const index = students.findIndex(s => s.studentId === updatedStudent.studentId);
+    if (index !== -1) {
+      students[index] = updatedStudent;
+      this.studentsSubject.next([...students]);
+      console.log('Student cache updated for:', updatedStudent.studentId);
+    }
   }
 
   toggleStudentApproval(studentId: string, termId?: string): void {

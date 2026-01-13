@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 
@@ -40,36 +40,46 @@ export class Dashboard implements OnInit, OnDestroy {
   // ---- APPROVAL STATISTICS ----
   approvalRate = '0.0';
 
-  constructor(private studentService: StudentService) {}
+  constructor(
+    private studentService: StudentService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
+    // Check if using mock data
+    this.isUsingMockData = this.studentService.isUsingMockData();
+
     // Subscribe to loading state
     this.subscription.add(
       this.studentService.loading$.subscribe(loading => {
-        this.isLoading = loading;
+        this.ngZone.run(() => {
+          console.log('Dashboard: isLoading changed to', loading);
+          this.isLoading = loading;
+          this.cdr.detectChanges();
+        });
       })
     );
 
     // Subscribe to student updates
     this.subscription.add(
       this.studentService.students$.subscribe(students => {
-        this.students = students;
-        this.updateStatistics();
-        this.updateBatchData();
-        console.log('Dashboard: Students loaded:', students.length);
+        this.ngZone.run(() => {
+          console.log('Dashboard: Students loaded:', students.length);
+          this.students = [...students]; // Create new array reference
+          if (students.length > 0) {
+            this.updateStatistics();
+            this.updateBatchData();
+            console.log('Dashboard: Statistics updated, forcing change detection');
+          }
+          // Force change detection after all updates
+          this.cdr.detectChanges();
+        });
       })
     );
 
-    // Check if using mock data
-    this.isUsingMockData = this.studentService.isUsingMockData();
-
-    // Force initial data load if no students after a short delay
-    setTimeout(() => {
-      if (this.students.length === 0) {
-        console.log('Dashboard: No students found, refreshing...');
-        this.studentService.refreshStudents();
-      }
-    }, 100);
+    // Ensure data is loaded (only loads once if not already loaded)
+    this.studentService.ensureDataLoaded();
   }
 
   ngOnDestroy() {

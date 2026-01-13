@@ -14,7 +14,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Validate input
     if (!email || !password) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'Email and password are required'
       });
       return;
@@ -25,7 +25,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     if (!advisor) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Invalid email or password'
       });
       return;
@@ -36,7 +36,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     if (!isPasswordValid) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Invalid email or password'
       });
       return;
@@ -48,27 +48,25 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       email: advisor.email
     });
 
-    // Return success response
+    // Return success response matching frontend expectations
     res.status(200).json({
-      status: 'success',
+      success: true,
       message: 'Login successful',
-      data: {
-        token,
-        advisor: {
-          id: advisor._id,
-          name: advisor.name,
-          email: advisor.email,
-          department: advisor.department,
-          designation: advisor.designation,
-          phone: advisor.phone,
-          office_room: advisor.office_room
-        }
+      token,
+      advisor: {
+        id: advisor._id,
+        name: advisor.name,
+        email: advisor.email,
+        department: advisor.department,
+        designation: advisor.designation,
+        phone: advisor.phone,
+        office_room: advisor.office_room
       }
     });
   } catch (error: any) {
     console.error('Login error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Login failed',
       error: error.message
     });
@@ -85,7 +83,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
 
     if (!advisorId) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Unauthorized'
       });
       return;
@@ -96,7 +94,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
 
     if (!advisor) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Advisor not found'
       });
       return;
@@ -109,7 +107,7 @@ export const getProfile = async (req: Request, res: Response): Promise<void> => 
   } catch (error: any) {
     console.error('Get profile error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to fetch profile',
       error: error.message
     });
@@ -128,7 +126,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
     // Validate input
     if (!currentPassword || !newPassword) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'Current password and new password are required'
       });
       return;
@@ -136,7 +134,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
 
     if (newPassword.length < 6) {
       res.status(400).json({
-        status: 'error',
+        success: false,
         message: 'New password must be at least 6 characters'
       });
       return;
@@ -147,7 +145,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
 
     if (!advisor) {
       res.status(404).json({
-        status: 'error',
+        success: false,
         message: 'Advisor not found'
       });
       return;
@@ -158,7 +156,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
 
     if (!isPasswordValid) {
       res.status(401).json({
-        status: 'error',
+        success: false,
         message: 'Current password is incorrect'
       });
       return;
@@ -175,7 +173,7 @@ export const updatePassword = async (req: Request, res: Response): Promise<void>
   } catch (error: any) {
     console.error('Update password error:', error);
     res.status(500).json({
-      status: 'error',
+      success: false,
       message: 'Failed to update password',
       error: error.message
     });

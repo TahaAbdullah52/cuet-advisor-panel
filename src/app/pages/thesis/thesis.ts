@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -45,42 +45,47 @@ export class Thesis implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private studentService: StudentService,
-    private apiService: ApiService
+    private apiService: ApiService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {}
 
   ngOnInit() {
     // Subscribe to student updates
     this.subscription.add(
       this.studentService.students$.subscribe(students => {
-        // Filter students who are eligible for thesis (active final year students only)
-        this.students = students
-          .filter(s => 
-            s.graduationStatus === 'active' && // Only active (non-graduated) students
-            (s.batch === '20' || s.batch === '21') // Final year and pre-final year students
-          )
-          .sort((a, b) => {
-            // Sort by batch first, then by student ID
-            if (a.batch !== b.batch) {
-              return a.batch.localeCompare(b.batch);
-            }
-            return a.studentId.localeCompare(b.studentId);
-          });
+        this.ngZone.run(() => {
+          // Filter students who are eligible for thesis (active final year students only)
+          this.students = students
+            .filter(s => 
+              s.graduationStatus === 'active' && // Only active (non-graduated) students
+              (s.batch === '20' || s.batch === '21') // Final year and pre-final year students
+            )
+            .sort((a, b) => {
+              // Sort by batch first, then by student ID
+              if (a.batch !== b.batch) {
+                return a.batch.localeCompare(b.batch);
+              }
+              return a.studentId.localeCompare(b.studentId);
+            });
+          console.log('Thesis: Students loaded:', this.students.length);
+          this.cdr.detectChanges();
+        });
       })
     );
 
     // Subscribe to loading state
     this.subscription.add(
       this.studentService.loading$.subscribe(loading => {
-        this.isLoading = loading;
+        this.ngZone.run(() => {
+          this.isLoading = loading;
+          this.cdr.detectChanges();
+        });
       })
     );
 
-    // Force initial data load if no students
-    setTimeout(() => {
-      if (this.students.length === 0) {
-        this.studentService.refreshStudents();
-      }
-    }, 100);
+    // Ensure data is loaded
+    this.studentService.ensureDataLoaded();
   }
 
   ngOnDestroy() {
@@ -111,25 +116,39 @@ export class Thesis implements OnInit, OnDestroy {
   updateThesisInfo() {
     if (!this.selectedStudent) return;
 
+    // Prevent multiple submissions
+    if (this.isUpdating) return;
+
     this.isUpdating = true;
+    this.cdr.detectChanges();
 
     this.apiService.updateThesisInfo(this.selectedStudent.studentId, this.thesisForm).subscribe({
       next: (response) => {
+        this.isUpdating = false;
+        this.cdr.detectChanges();
+        
         if (response.success && response.data) {
           // Update the student in the local array
           const index = this.students.findIndex(s => s.studentId === this.selectedStudent!.studentId);
           if (index !== -1) {
             this.students[index] = response.data;
-            this.selectedStudent = response.data;
           }
-          console.log('Thesis information updated successfully');
+          // Update selected student with proper safety check
+          this.selectedStudent = response.data;
+          
+          // CRITICAL: Update StudentService to persist changes when navigating away
+          this.studentService.updateStudentInCache(response.data);
+          
+          console.log('✅ Thesis information updated successfully');
+        } else {
+          console.error('Failed to update thesis information:', response.error || 'Unknown error');
         }
-        this.isUpdating = false; // Move this here to ensure it's always set
       },
       
       error: (error) => {
         console.error('Error updating thesis information:', error);
-        this.isUpdating = false; // Ensure it's set on error too
+        this.isUpdating = false;
+        this.cdr.detectChanges();
       }
     });
   }
@@ -149,7 +168,7 @@ export class Thesis implements OnInit, OnDestroy {
 
   // Get only CGPA for all 8 semesters
   getTermCgpaData(): { termId: string, cgpa: number }[] {
-    if (!this.selectedStudent) return [];
+    if (!this.selectedStudent || !this.selectedStudent.terms) return [];
     
     return this.selectedStudent.terms
       .filter(t => t.resultPublished)

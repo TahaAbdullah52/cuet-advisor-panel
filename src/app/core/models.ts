@@ -57,6 +57,7 @@ export interface LoginCredentials {
 export interface LoginResponse {
   success: boolean;
   message?: string;
+  token?: string;
   advisor?: {
     name: string;
     email: string;

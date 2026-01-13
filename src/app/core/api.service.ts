@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
-import { catchError, delay } from 'rxjs/operators';
+import { Observable, of, throwError, TimeoutError } from 'rxjs';
+import { catchError, delay, map, timeout } from 'rxjs/operators';
 import { Student, LoginCredentials, LoginResponse, ThesisInfo, ApprovalRequest, ApprovalResponse } from './models';
 import { RoutineEntry } from './routine.models';
 import { STUDENTS } from './mock-data';
@@ -35,9 +35,18 @@ export class ApiService {
     
     return this.http.post<LoginResponse>(`${this.baseUrl}/auth/login`, credentials)
       .pipe(
-        catchError(error => {
-          console.warn('Login API call failed, falling back to mock login:', error);
-          return this.mockLogin(credentials);
+        timeout(10000), // 10 second timeout
+        catchError((error) => {
+          console.error('Login API error:', error);
+          // Always return success: false for any error
+          const errorMessage = error instanceof TimeoutError 
+            ? 'Request timeout. Please check your connection.' 
+            : (error.error?.message || error.message || 'Invalid credentials');
+          
+          return of({
+            success: false,
+            message: errorMessage
+          } as LoginResponse);
         })
       );
   }
@@ -120,9 +129,27 @@ export class ApiService {
       return this.mockGenerateApprovalContent(approvalRequest);
     }
 
-    return this.http.post<ApprovalResponse>(`${this.baseUrl}/students/generate-approval`, approvalRequest)
+    // Backend expects 'approved' or 'rejected', convert 'disapproved' to 'rejected'
+    const backendRequest = {
+      ...approvalRequest,
+      newStatus: approvalRequest.newStatus === 'disapproved' ? 'rejected' : approvalRequest.newStatus
+    };
+    
+    console.log('🔵 [API] generateApprovalContent called');
+    console.log('Frontend request:', approvalRequest);
+    console.log('Backend request:', backendRequest);
+
+    return this.http.post<ApprovalResponse>(`${this.baseUrl}/students/generate-approval`, backendRequest)
       .pipe(
-        catchError(error => {
+        timeout(30000), // 30 second timeout for AI generation
+        catchError((error) => {
+          console.error('ML API error:', error);
+          if (error instanceof TimeoutError) {
+            return of({
+              success: false,
+              message: 'AI generation timeout. Using fallback...'
+            });
+          }
           console.warn('ML API call failed, falling back to mock:', error);
           return this.mockGenerateApprovalContent(approvalRequest);
         })
@@ -134,10 +161,21 @@ export class ApiService {
       return this.mockSendApprovalEmail(studentId, content, status);
     }
 
-    const payload = { studentId, content, status };
+    // Backend expects 'approved' or 'rejected', convert 'disapproved' to 'rejected'
+    const backendStatus = status === 'disapproved' ? 'rejected' : 'approved';
+    console.log('🔵 [API] sendApprovalEmail called');
+    console.log('Student ID:', studentId);
+    console.log('Content length:', content.length);
+    console.log('Frontend status:', status);
+    console.log('Backend status:', backendStatus);
+    
+    const payload = { studentId, emailContent: content, newStatus: backendStatus };
+    console.log('Payload:', payload);
+    
     return this.http.post<ApiResponse<boolean>>(`${this.baseUrl}/students/send-approval-email`, payload)
       .pipe(
         catchError(error => {
+          console.error('❌ [API] Email send error:', error);
           console.warn('Email API call failed, falling back to mock:', error);
           return this.mockSendApprovalEmail(studentId, content, status);
         })
@@ -166,9 +204,15 @@ export class ApiService {
 
     return this.http.put<ApiResponse<Student>>(`${this.baseUrl}/students/${studentId}/thesis`, thesisInfo)
       .pipe(
+        timeout(10000),
         catchError(error => {
-          console.warn('API call failed, falling back to mock data:', error);
-          return this.updateMockThesisInfo(studentId, thesisInfo);
+          console.error('Update thesis API error:', error);
+          return of({
+            success: false,
+            error: error instanceof TimeoutError 
+              ? 'Request timeout' 
+              : error.error?.message || 'Failed to update thesis information'
+          });
         })
       );
   }
@@ -216,16 +260,44 @@ export class ApiService {
       );
   }
 
-  addRoutine(routine: RoutineEntry): Observable<ApiResponse<RoutineEntry>> {
+  addRoutine(routine: RoutineEntry): Observable<ApiResponse<RoutineEntry[]>> {
     if (this.useMockData) {
-      return this.addMockRoutine(routine);
+      return this.addMockRoutine(routine).pipe(
+        map(response => ({
+          ...response,
+          data: response.data ? [response.data] : []
+        }))
+      );
     }
 
-    return this.http.post<ApiResponse<RoutineEntry>>(`${this.baseUrl}/routines`, routine)
+    // Transform frontend format to backend format
+    const currentYear = new Date().getFullYear();
+    const batchYear = routine.batchName.replace('Batch ', '20'); // Extract year from "Batch 21" -> "2021"
+    
+    const backendFormat = {
+      semester: 'Spring', // Default to current semester
+      academic_year: `${currentYear}-${(currentYear + 1).toString().slice(-2)}`,
+      entries: [{
+        day: routine.dayName,
+        time: `${routine.startTime} - ${routine.endTime}`,
+        course_code: 'CSE' + Math.floor(Math.random() * 1000), // Generate course code if not provided
+        course_name: routine.courseName,
+        room: routine.roomNo,
+        type: routine.type.toLowerCase() === 'lab' ? 'lab' : 'lecture'
+      }]
+    };
+
+    return this.http.post<ApiResponse<RoutineEntry[]>>(`${this.baseUrl}/routines`, backendFormat)
       .pipe(
+        timeout(10000),
         catchError(error => {
-          console.warn('API call failed, falling back to mock data:', error);
-          return this.addMockRoutine(routine);
+          console.error('Add routine API error:', error);
+          return of({
+            success: false,
+            error: error instanceof TimeoutError 
+              ? 'Request timeout' 
+              : error.error?.message || 'Failed to add routine'
+          });
         })
       );
   }
@@ -235,7 +307,10 @@ export class ApiService {
       return this.removeMockRoutine(routineId);
     }
 
-    return this.http.delete<ApiResponse<boolean>>(`${this.baseUrl}/routines/${routineId}`)
+    // Extract MongoDB ID from composite ID (format: mongoId_courseCode)
+    const mongoId = routineId.split('_')[0];
+
+    return this.http.delete<ApiResponse<boolean>>(`${this.baseUrl}/routines/${mongoId}`)
       .pipe(
         catchError(error => {
           console.warn('API call failed, falling back to mock data:', error);
@@ -263,10 +338,10 @@ export class ApiService {
         message: 'Student retrieved successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -281,10 +356,10 @@ export class ApiService {
         message: 'Student updated successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -310,10 +385,10 @@ export class ApiService {
         message: 'Student approval updated successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -351,10 +426,11 @@ export class ApiService {
         }
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      // Return observable with failed response instead of throwing error
+      return of({
         success: false,
         message: 'Invalid email or password'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -364,17 +440,17 @@ export class ApiService {
     const validCurrentPassword = 'pass12345';
     
     if (passwordData.email !== validEmail) {
-      return throwError(() => ({
+      return of({
         success: false,
         message: 'Invalid user'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
     
     if (passwordData.currentPassword !== validCurrentPassword) {
-      return throwError(() => ({
+      return of({
         success: false,
         message: 'Current password is incorrect'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
     
     // In a real implementation, this would hash and store the new password
@@ -399,10 +475,11 @@ export class ApiService {
         message: 'Thesis information updated successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      // Return observable with error response instead of throwing
+      return of({
         success: false,
         error: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -411,10 +488,10 @@ export class ApiService {
     // Check if student already exists
     const existingStudent = STUDENTS.find(s => s.studentId === studentData.studentId);
     if (existingStudent) {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Student already exists'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
 
     // Create new student
@@ -459,10 +536,10 @@ export class ApiService {
         message: 'Student removed from thesis supervision successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -516,10 +593,10 @@ export class ApiService {
         message: 'Routine removed successfully (mock data)'
       }).pipe(delay(this.mockDelay));
     } else {
-      return throwError(() => ({
+      return of({
         success: false,
         error: 'Routine not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
   }
 
@@ -528,10 +605,10 @@ export class ApiService {
     const student = STUDENTS.find(s => s.studentId === approvalRequest.studentId);
     
     if (!student) {
-      return throwError(() => ({
+      return of({
         success: false,
         message: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
 
     // Generate mock ML content based on student performance
@@ -613,10 +690,10 @@ CUET`;
     const student = STUDENTS.find(s => s.studentId === studentId);
     
     if (!student) {
-      return throwError(() => ({
+      return of({
         success: false,
         message: 'Student not found'
-      }));
+      }).pipe(delay(this.mockDelay));
     }
 
     // Update student approval status
