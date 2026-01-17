@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "cuet-advisor-panel",
   "builds": [
     {
       "src": "package.json",
