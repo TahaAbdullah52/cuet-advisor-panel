@@ -1,6 +1,18 @@
 ﻿import 'dotenv/config';
 import axios from 'axios';
 
+// Ollama Configuration
+// ====================
+// IMPORTANT: Each developer can use their own Ollama model!
+// 
+// To use a different model:
+// 1. Check your installed models: ollama list
+// 2. Update OLLAMA_MODEL in .env file with YOUR model name
+// 3. Examples: llama3:latest, mistral:latest, qwen2.5:7b, etc.
+// 
+// No need to share GGUF files - just share model names!
+// See backend/OLLAMA_SETUP.md for detailed instructions.
+
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'qwen2.5-7b-flirty:latest';
 

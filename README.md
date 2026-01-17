@@ -83,18 +83,20 @@ ng version
 
 ##  Installation & Setup
 
-### 1. Clone the Repository
+### Frontend Setup
+
+#### 1. Clone the Repository
 ```bash
 git clone <repository-url>
 cd cuet-advisor-panel
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 ```bash
 npm install
 ```
 
-### 3. Environment Configuration
+#### 3. Environment Configuration
 The application supports both database and mock data modes. Configure in `src/environments/environment.ts`:
 
 ```typescript
@@ -106,12 +108,112 @@ export const environment = {
 };
 ```
 
-### 4. Start Development Server
+#### 4. Start Development Server
 ```bash
 ng serve
 ```
 
 Navigate to `http://localhost:4200/` in your browser.
+
+### Backend Setup
+
+#### 1. Navigate to Backend Directory
+```bash
+cd backend
+```
+
+#### 2. Install Backend Dependencies
+```bash
+npm install
+```
+
+#### 3. Configure Environment Variables
+Copy the example environment file and configure:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file with your configuration:
+```env
+# Database
+MONGODB_URI=mongodb://localhost:27017/cuet-advisor-panel
+
+# Authentication
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+
+# Email Service
+GMAIL_USER=advisor@cuet.ac.bd
+GMAIL_APP_PASSWORD=your-16-char-app-password-from-google
+
+# AI Service - Choose 'ollama' (local) or 'gemini' (cloud)
+AI_SERVICE=ollama
+
+# Ollama Configuration (if using local AI)
+OLLAMA_MODEL=qwen2.5-7b-flirty:latest  # Change this to YOUR model name
+OLLAMA_BASE_URL=http://localhost:11434
+```
+
+#### 4. Setup Ollama (For Local AI)
+
+**IMPORTANT**: Different users can use different Ollama models!
+
+1. **Install Ollama**: Download from https://ollama.com/download
+
+2. **Check your installed models**:
+   ```bash
+   ollama list
+   ```
+
+3. **Update `.env` with YOUR model name**:
+   ```env
+   # Use any model you have installed
+   OLLAMA_MODEL=llama3:latest
+   # OR
+   OLLAMA_MODEL=mistral:latest
+   # OR
+   OLLAMA_MODEL=your-custom-model-name
+   ```
+
+4. **If you don't have any models, download one**:
+   ```bash
+   ollama pull llama3
+   # OR
+   ollama pull mistral
+   # OR
+   ollama pull qwen2.5:7b
+   ```
+
+📚 **Detailed Ollama Setup Guide**: See [backend/OLLAMA_SETUP.md](backend/OLLAMA_SETUP.md)
+
+**Key Points**:
+- ✅ Each user can use a **different Ollama model**
+- ✅ Just change `OLLAMA_MODEL` in `.env` to match your installed model
+- ✅ No need to share GGUF files between team members
+- ✅ Run `ollama list` to see your available models
+- ✅ Or use Gemini API instead by setting `AI_SERVICE=gemini`
+
+#### 5. Start Backend Server
+```bash
+npm run dev
+```
+
+The backend will run on `http://localhost:3000`
+
+#### 6. Run Tests (Optional)
+```bash
+# Run all tests
+npm test
+
+# Run only unit tests
+npm run test:unit
+
+# Run only integration tests  
+npm run test:integration
+
+# Run tests with coverage
+npm run test:coverage
+```
 
 ##  Architecture & Data Management
 
