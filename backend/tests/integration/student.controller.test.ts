@@ -45,12 +45,16 @@ describe('Student Controller - Integration Tests', () => {
 
     authToken = loginResponse.body.token;
 
-    // Create test student
+    // Create test student with all required fields
     testStudent = await Student.create({
       student_id: '2104040',
       name: 'John Doe',
       email: 'john@student.cuet.ac.bd',
+      registration_number: '2104040',
+      department: 'Computer Science & Engineering',
       batch: '21',
+      session: '2020-21',
+      phone: '+880-1234567890',
       cgpa: 3.75,
       registration_status: 'registered',
       approval_status: 'pending',
@@ -60,7 +64,7 @@ describe('Student Controller - Integration Tests', () => {
       L3T2: {
         term_gpa: 3.85,
         courses: [
-          { code: 'CSE 301', title: 'Database', credit: 3.0, grade: 'A', gpa: 4.0 },
+          { code: 'CSE 301', name: 'Database', credits: 3.0, grade: 'A', gpa: 4.0 },
         ],
       },
     });
@@ -101,7 +105,11 @@ describe('Student Controller - Integration Tests', () => {
         student_id: '2104999',
         name: 'Other Student',
         email: 'other@student.cuet.ac.bd',
+        registration_number: '2104999',
+        department: 'Computer Science & Engineering',
         batch: '21',
+        session: '2020-21',
+        phone: '+880-1111111111',
         cgpa: 3.5,
         registration_status: 'registered',
         approval_status: 'pending',
@@ -116,7 +124,7 @@ describe('Student Controller - Integration Tests', () => {
 
       // Should only get 1 student (testStudent)
       expect(response.body.data.length).toBe(1);
-      expect(response.body.data[0].student_id).toBe('2104040');
+      expect(response.body.data[0].studentId).toBe('2104040');
     });
   });
 
@@ -128,7 +136,7 @@ describe('Student Controller - Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body.data).toHaveProperty('student_id', '2104040');
+      expect(response.body.data).toHaveProperty('studentId', '2104040');
       expect(response.body.data).toHaveProperty('name', 'John Doe');
     });
 
@@ -171,7 +179,7 @@ describe('Student Controller - Integration Tests', () => {
         });
 
       expect(response.status).toBe(200);
-      expect(response.body.data).toHaveProperty('registration_status', 'not_registered');
+      expect(response.body.data).toHaveProperty('registrationStatus', 'not_registered');
     });
 
     it('should fail without authentication', async () => {
@@ -325,7 +333,11 @@ describe('Student Controller - Integration Tests', () => {
           student_id: '2104041',
           name: 'Jane Smith',
           email: 'jane@student.cuet.ac.bd',
+          registration_number: '2104041',
+          department: 'Computer Science & Engineering',
           batch: '21',
+          session: '2020-21',
+          phone: '+880-2222222222',
           cgpa: 3.6,
           registration_status: 'registered',
           approval_status: 'pending',
@@ -337,7 +349,11 @@ describe('Student Controller - Integration Tests', () => {
           student_id: '2104042',
           name: 'Bob Johnson',
           email: 'bob@student.cuet.ac.bd',
+          registration_number: '2104042',
+          department: 'Computer Science & Engineering',
           batch: '21',
+          session: '2020-21',
+          phone: '+880-3333333333',
           cgpa: 3.8,
           registration_status: 'registered',
           approval_status: 'pending',

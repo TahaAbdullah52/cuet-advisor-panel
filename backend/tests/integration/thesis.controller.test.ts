@@ -1,6 +1,7 @@
 import request from 'supertest';
 import app from '../../src/app';
 import Advisor from '../../src/models/Advisor.model';
+import Student from '../../src/models/Student.model';
 import ThesisInfo from '../../src/models/ThesisInfo.model';
 import { connectDB, disconnectDB } from '../../src/config/database';
 
@@ -20,6 +21,7 @@ describe('Thesis Controller - Integration Tests', () => {
   beforeEach(async () => {
     // Clean database
     await Advisor.deleteMany({});
+    await Student.deleteMany({});
     await ThesisInfo.deleteMany({});
 
     // Create test advisor
@@ -45,14 +47,31 @@ describe('Thesis Controller - Integration Tests', () => {
 
     authToken = loginResponse.body.token;
 
+    // Create test student first
+    const student = await Student.create({
+      student_id: '2104040',
+      name: 'John Doe',
+      email: 'john@student.cuet.ac.bd',
+      registration_number: '2104040',
+      department: 'Computer Science & Engineering',
+      batch: '21',
+      session: '2020-21',
+      phone: '+880-1234567890',
+      cgpa: 3.5,
+      registration_status: 'registered',
+      approval_status: 'pending',
+      graduation_status: 'active',
+      next_semester_registration: 'L4T1',
+      advisor_id: advisorId,
+    });
+
     // Create test thesis
     testThesis = await ThesisInfo.create({
-      student_id: '2104040',
-      student_name: 'John Doe',
-      thesis_topic: 'Machine Learning Applications in Healthcare',
+      student_id: student._id,
+      title: 'Machine Learning Applications in Healthcare',
+      supervisor: 'Dr. Test Advisor',
       status: 'ongoing',
       progress_percentage: 45,
-      advisor_id: advisorId,
     });
   });
 
@@ -87,13 +106,25 @@ describe('Thesis Controller - Integration Tests', () => {
         office_room: 'Room 402',
       });
 
-      await ThesisInfo.create({
+      const otherStudent = await Student.create({
         student_id: '2104999',
-        student_name: 'Other Student',
-        thesis_topic: 'AI in Education',
+        name: 'Other Student',
+        email: 'other@student.cuet.ac.bd',
+        batch: '21',
+        cgpa: 3.5,
+        registration_status: 'registered',
+        approval_status: 'pending',
+        graduation_status: 'active',
+        next_semester_registration: 'L4T1',
+        advisor_id: otherAdvisor._id.toString(),
+      });
+
+      await ThesisInfo.create({
+        student_id: otherStudent._id,
+        title: 'AI in Education',
+        supervisor: 'Dr. Other Advisor',
         status: 'ongoing',
         progress_percentage: 20,
-        advisor_id: otherAdvisor._id.toString(),
       });
 
       const response = await request(app)
@@ -280,24 +311,37 @@ describe('Thesis Controller - Integration Tests', () => {
         office_room: 'Room 402',
       });
 
-      const otherThesis = await ThesisInfo.create({
+      // Create other student first
+      const otherStudent = await Student.create({
         student_id: '2104888',
-        student_name: 'Other Student',
-        thesis_topic: 'AI in Education',
+        name: 'Other Student',
+        email: 'otherstudent@student.cuet.ac.bd',
+        registration_number: '2104888',
+        department: 'Computer Science & Engineering',
+        batch: '21',
+        session: '2020-21',
+        phone: '+880-4444444444',
+        advisor_id: otherAdvisor._id,
+        approval_status: 'approved',
+      });
+
+      await ThesisInfo.create({
+        student_id: otherStudent._id,
+        title: 'AI in Education',
+        supervisor: 'Dr. Other Advisor',
         status: 'ongoing',
         progress_percentage: 20,
-        advisor_id: otherAdvisor._id.toString(),
       });
 
       // Try to delete other advisor's thesis
       const response = await request(app)
-        .delete(`/api/thesis/students/${otherThesis.student_id}`)
+        .delete(`/api/thesis/students/${otherStudent._id}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(response.status).toBe(404);
 
       // Verify thesis still exists
-      const existingThesis = await ThesisInfo.findOne({ student_id: otherThesis.student_id });
+      const existingThesis = await ThesisInfo.findOne({ student_id: otherStudent._id });
       expect(existingThesis).not.toBeNull();
     });
   });
