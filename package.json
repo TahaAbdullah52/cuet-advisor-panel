@@ -5,6 +5,8 @@
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build",
+    "build:prod": "ng build --configuration production",
+    "vercel-build": "ng build --configuration production",
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
@@ -39,6 +41,8 @@
     "@angular/cli": "^21.0.5",
     "@angular/compiler-cli": "^21.0.0",
     "@tailwindcss/postcss": "^4.1.12",
+    "@types/jest": "^30.0.0",
+    "@types/supertest": "^6.0.3",
     "jsdom": "^27.1.0",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.12",

@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "name": "cuet-advisor-panel",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist/cuet-advisor-panel/browser"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
+}
