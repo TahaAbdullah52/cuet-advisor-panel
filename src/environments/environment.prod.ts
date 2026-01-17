@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://cuet-advisor-backend.onrender.com', // Update this after backend deployment
+  apiUrl: 'https://cuet-advisor-backend.onrender.com/api',
   useMockData: false, // Use real API in production
   mockDataDelay: 0,
   features: {
