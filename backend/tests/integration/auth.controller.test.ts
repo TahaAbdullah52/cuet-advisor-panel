@@ -1,8 +1,7 @@
 import request from 'supertest';
 import app from '../../src/app';
 import Advisor from '../../src/models/Advisor.model';
-import Student from '../../src/models/Student.model';
-import { connectDB, disconnectDB } from '../../src/config/database';
+import { connectTestDB, disconnectTestDB, clearTestDB } from '../../src/config/database.test';
 import jwt from 'jsonwebtoken';
 
 describe('Auth Controller - Integration Tests', () => {
@@ -10,17 +9,16 @@ describe('Auth Controller - Integration Tests', () => {
   let advisorId: string;
 
   beforeAll(async () => {
-    await connectDB();
+    await connectTestDB();
   });
 
   afterAll(async () => {
-    await disconnectDB();
+    await disconnectTestDB();
   });
 
   beforeEach(async () => {
-    // Clean database
-    await Advisor.deleteMany({});
-    await Student.deleteMany({});
+    // Clean database before each test
+    await clearTestDB();
 
     // Create test advisor
     const advisor = await Advisor.create({

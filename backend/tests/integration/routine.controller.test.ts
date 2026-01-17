@@ -2,7 +2,7 @@ import request from 'supertest';
 import app from '../../src/app';
 import Advisor from '../../src/models/Advisor.model';
 import Routine from '../../src/models/Routine.model';
-import { connectDB, disconnectDB } from '../../src/config/database';
+import { connectTestDB, disconnectTestDB, clearTestDB } from '../../src/config/database.test';
 
 describe('Routine Controller - Integration Tests', () => {
   let authToken: string;
@@ -10,17 +10,16 @@ describe('Routine Controller - Integration Tests', () => {
   let testRoutine: any;
 
   beforeAll(async () => {
-    await connectDB();
+    await connectTestDB();
   });
 
   afterAll(async () => {
-    await disconnectDB();
+    await disconnectTestDB();
   });
 
   beforeEach(async () => {
-    // Clean database
-    await Advisor.deleteMany({});
-    await Routine.deleteMany({});
+    // Clean database before each test
+    await clearTestDB();
 
     // Create test advisor
     const advisor = await Advisor.create({
