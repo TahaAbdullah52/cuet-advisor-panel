@@ -21,9 +21,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   globals: {
     'ts-jest': {
-      tsconfig: {
-        esModuleInterop: true,
-      },
+      tsconfig: '<rootDir>/tsconfig.test.json',
     },
   },
 };
