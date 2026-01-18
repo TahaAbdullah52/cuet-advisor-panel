@@ -30,6 +30,18 @@ app.get('/api-docs.json', (_req: Request, res: Response) => {
   res.send(swaggerSpec);
 });
 
+// Root endpoint
+app.get('/', (_req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'CUET Advisor Panel API',
+    version: '1.0.0',
+    documentation: '/api-docs',
+    health: '/health',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check route
 app.get('/health', (_req: Request, res: Response) => {
   res.status(200).json({
