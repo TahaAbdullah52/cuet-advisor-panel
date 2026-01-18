@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
-app.use((req: Request, res: Response, next: Function) => {
+app.use((req: Request, _res: Response, next: Function) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
