@@ -18,6 +18,12 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request logging middleware
+app.use((req: Request, res: Response, next: Function) => {
+  console.log(`${req.method} ${req.path}`);
+  next();
+});
+
 // Swagger API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
@@ -38,7 +44,12 @@ app.get('/', (_req: Request, res: Response) => {
     version: '1.0.0',
     documentation: '/api-docs',
     health: '/health',
-    timestamp: new Date().toISOString()
+    endpoints: {
+      auth: '/api/auth',
+      students: '/api/students',
+      thesis: '/api/thesis',
+      routines: '/api/routines'
+    }
   });
 });
 
@@ -52,18 +63,28 @@ app.get('/health', (_req: Request, res: Response) => {
   });
 });
 
-// API Routes
+// API Routes - MUST come before 404 handler
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/thesis', thesisRoutes);
 app.use('/api/routines', routineRoutes);
-// etc.
 
-// 404 handler
+// 404 handler - MUST be last
 app.use((_req: Request, res: Response) => {
+  console.log(`404: ${_req.method} ${_req.path}`);
   res.status(404).json({
     status: 'error',
-    message: 'Route not found'
+    message: 'Route not found',
+    path: _req.path,
+    method: _req.method,
+    available: {
+      auth: '/api/auth',
+      students: '/api/students',
+      thesis: '/api/thesis',
+      routines: '/api/routines',
+      docs: '/api-docs',
+      health: '/health'
+    }
   });
 });
 
