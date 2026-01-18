@@ -1,12 +1,11 @@
 export const environment = {
-  production: false,
-  // apiUrl: 'http://localhost:3000/api',
+  production: true,
   apiUrl: 'https://cuet-advisor-backend.onrender.com/api',
-  useMockData: false, // Backend is ready
-  mockDataDelay: 50, // Reduced delay for better UX
+  useMockData: false,
+  mockDataDelay: 0,
   features: {
     enableRefresh: true,
-    showDataSource: true,
+    showDataSource: false,
     enableBulkApproval: true
   }
 };
